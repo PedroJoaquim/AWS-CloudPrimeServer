@@ -1,4 +1,4 @@
-package pt.ist.cnv.cloudprime;
+package pt.ist.cnv.cloudprime.httpserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -7,27 +7,34 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 
+/**
+ * Created by Pedro Joaquim on 20-04-2016.
+ */
+public abstract class BaseHandler implements HttpHandler {
 
-public class ReadRequestHandler implements HttpHandler {
+
+    private HashMap<String, String> urlQueyParams = new HashMap<String, String>();
 
 
-    private static final String URL_PARAMETER_NAME = "n";
+
+
+    protected abstract void executeRequest(HttpExchange httpExchange);
 
     @Override
-    public void handle(HttpExchange httpExchange) throws IOException {
-        String numberToFactor = getRequestNumber(httpExchange);
-
-        if(numberToFactor == null || "".equals(numberToFactor) || !numberToFactor.matches("^\\d+$")){
-            writeResponseToClient(httpExchange, "Invalid Request", 400);
-        }
-
+    public void handle(HttpExchange httpExchange) throws IOException{
+        readURLParameters(httpExchange);
+        executeRequest(httpExchange);
     }
 
-    private String getRequestNumber(HttpExchange httpExchange) {
 
+    protected String getURLParameter(String urlParameterName) {
+        return this.urlQueyParams.containsKey(urlParameterName) ? this.urlQueyParams.get(urlParameterName) : null;
+    }
+
+
+    protected void readURLParameters(HttpExchange httpExchange) {
 
         String query = httpExchange.getRequestURI().getQuery();
-        HashMap<String, String> urlQueyParams = new HashMap<String, String>();
 
         if (query != null) {
             for (String param : query.split("&")) {
@@ -44,11 +51,9 @@ public class ReadRequestHandler implements HttpHandler {
                 }
             }
         }
-
-        return urlQueyParams.containsKey(URL_PARAMETER_NAME) ? urlQueyParams.get(URL_PARAMETER_NAME) : null;
     }
 
-    private void writeResponseToClient(HttpExchange httpExchange, String result, int code) {
+    protected void writeResponseToClient(HttpExchange httpExchange, String result, int code) {
         try {
             byte[] answerBytes = result.getBytes();
             httpExchange.sendResponseHeaders(code, answerBytes.length);

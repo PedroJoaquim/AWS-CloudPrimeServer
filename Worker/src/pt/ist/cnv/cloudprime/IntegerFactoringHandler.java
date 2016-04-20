@@ -4,8 +4,12 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import pt.ist.cnv.cloudprime.instrumentation.CloudPrimeIT;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 
 
@@ -13,13 +17,21 @@ class IntegerFactoringHandler implements HttpHandler {
 
 
     private static final String URL_PARAMETER_NAME = "n";
+    private static final String URL_REQUEST_ID_NAME = "rid";
+    private static final String URL_IP_NAME = "ip";
+
+    private HashMap<String, String> urlQueyParams = new HashMap<String, String>();
 
     public void handle(HttpExchange httpExchange) throws IOException {
 
         String numberToFactor = getRequestNumber(httpExchange);
+        String requestID = getRequestID(httpExchange);
+        String lbIP = getResponseIP(httpExchange);
 
-        if(!isValid(numberToFactor)){
-            writeResponseToClient(httpExchange, "usage: http://.../iFactor?number=(number to factor)", 400);
+        writeResponseToClient(httpExchange, "OK", 200);
+        
+        if(!isValid(numberToFactor) || lbIP == null || requestID == null){
+            writeResponseToClient(httpExchange, "usage: http://.../f.html?n=(number to factor)", 400);
             return;
         }
 
@@ -27,19 +39,46 @@ class IntegerFactoringHandler implements HttpHandler {
         CloudPrimeIT.addThreadRequest(Thread.currentThread().getId(), numberToFactor);
         String result = IntegerFactoring.main(numberToFactor);
         System.out.println("[RESULT][THREAD:" + Thread.currentThread().getId() + "] " + numberToFactor + " = " + result);
+        
+        sendResponseToLB(result, requestID, lbIP);
+        
+    }
 
-        writeResponseToClient(httpExchange, result, 200);
+    private void sendResponseToLB(String result, String requestID, String ip) {
+        HttpURLConnection connection = null;
+        String targetURL = "http://" + ip + ":80/r.html?r=" + result + "&rid=" + requestID;
+        String line;
+
+        try {
+            //Create connection
+            URL url = new URL(targetURL);
+            connection = (HttpURLConnection)url.openConnection();
+            connection.setRequestMethod("GET");
+
+            BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+            while ((line = rd.readLine()) != null) {
+                //ignore
+            }
+
+            rd.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if(connection != null) {
+                connection.disconnect();
+            }
+        }
     }
 
     private boolean isValid(String numberToFactor) {
         return numberToFactor != null && numberToFactor.matches("^[0-9]+$");
     }
 
-    private String getRequestNumber(HttpExchange httpExchange) {
-
+    private void readURLParameters(HttpExchange httpExchange){
 
         String query = httpExchange.getRequestURI().getQuery();
-        HashMap<String, String> urlQueyParams = new HashMap<String, String>();
 
         if (query != null) {
             for (String param : query.split("&")) {
@@ -57,7 +96,18 @@ class IntegerFactoringHandler implements HttpHandler {
             }
         }
 
+    }
+
+    private String getRequestNumber(HttpExchange httpExchange) {
         return urlQueyParams.containsKey(URL_PARAMETER_NAME) ? urlQueyParams.get(URL_PARAMETER_NAME) : null;
+    }
+
+    private String getRequestID(HttpExchange httpExchange) {
+        return urlQueyParams.containsKey(URL_PARAMETER_NAME) ? urlQueyParams.get(URL_REQUEST_ID_NAME) : null;
+    }
+
+    private String getResponseIP(HttpExchange httpExchange) {
+        return urlQueyParams.containsKey(URL_PARAMETER_NAME) ? urlQueyParams.get(URL_IP_NAME) : null;
     }
 
     private void writeResponseToClient(HttpExchange httpExchange, String result, int code) {
