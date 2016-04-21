@@ -4,12 +4,10 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import pt.ist.cnv.cloudprime.instrumentation.CloudPrimeIT;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.HashMap;
 
 
@@ -24,11 +22,11 @@ class IntegerFactoringHandler implements HttpHandler {
 
     public void handle(HttpExchange httpExchange) throws IOException {
 
+        readURLParameters(httpExchange);
+
         String numberToFactor = getRequestNumber(httpExchange);
         String requestID = getRequestID(httpExchange);
         String lbIP = getResponseIP(httpExchange);
-
-        writeResponseToClient(httpExchange, "OK", 200);
         
         if(!isValid(numberToFactor) || lbIP == null || requestID == null){
             writeResponseToClient(httpExchange, "usage: http://.../f.html?n=(number to factor)", 400);
@@ -46,7 +44,15 @@ class IntegerFactoringHandler implements HttpHandler {
 
     private void sendResponseToLB(String result, String requestID, String ip) {
         HttpURLConnection connection = null;
-        String targetURL = "http://" + ip + ":80/r.html?r=" + result + "&rid=" + requestID;
+        String resultURL;
+
+        try {
+            resultURL = URLEncoder.encode(result, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            resultURL = "";
+        }
+
+        String targetURL = "http://" + ip + ":80/r.html?r=" + resultURL + "&rid=" + requestID;
         String line;
 
         try {

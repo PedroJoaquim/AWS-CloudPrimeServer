@@ -9,6 +9,7 @@ import java.util.*;
 
 public class CloudPrimeIT {
 
+    private static final String THIS_CLASS = "pt/ist/cnv/cloudprime/instrumentation/CloudPrimeIT";
     private static final String METRICS_FILENAME = "metrics.txt";
     private static HashMap<Long, ThreadMetrics> threadMetrics = new HashMap<Long, ThreadMetrics>();
     private static HashMap<Long, String> threadRequest = new HashMap<Long, String>();
@@ -36,7 +37,7 @@ public class CloudPrimeIT {
 
 
     private static void instrumentForRequestInfo(ClassInfo ci){
-        ci.addBefore("CloudPrimeIT", "startNewRequest", new Integer(0));
+        ci.addBefore(THIS_CLASS, "startNewRequest", new Integer(0));
 
         for (Enumeration e = ci.getRoutines().elements(); e.hasMoreElements(); ) {
             Routine routine = (Routine) e.nextElement();
@@ -63,10 +64,10 @@ public class CloudPrimeIT {
                     if (instr_type == InstructionTable.UNCONDITIONAL_INSTRUCTION){
 
                         if(isFunctionCall(opcode)){
-                            instr.addBefore("CloudPrimeIT", "newFunctionCalled", new Integer(0));
+                            instr.addBefore(THIS_CLASS, "newFunctionCalled", new Integer(0));
                         }
                         else{
-                            instr.addBefore("CloudPrimeIT", "newFunctionReturned", new Integer(0));
+                            instr.addBefore(THIS_CLASS, "newFunctionReturned", new Integer(0));
                         }
                     }
 
@@ -75,11 +76,11 @@ public class CloudPrimeIT {
                     }
                 }
 
-                bb.addBefore("CloudPrimeIT", "addInstructionMetrics", iNumber + "&" + memoryAllocation + "&" + comparisons);
+                bb.addBefore(THIS_CLASS, "addInstructionMetrics", iNumber + "&" + memoryAllocation + "&" + comparisons);
             }
         }
 
-        ci.addAfter("CloudPrimeIT", "endRequest", new Integer(0));
+        ci.addAfter(THIS_CLASS, "endRequest", new Integer(0));
     }
 
     private static boolean isAllocationInstruction(int opcode){
@@ -174,7 +175,7 @@ public class CloudPrimeIT {
             
             String longFilename = "/home/ec2-user/cloud-prime-server/metrics" +  File.separator + filename;
             //String longFilename = "/home/pedroj/Desktop/cnv/cloud-prime/metrics" +  File.separator + filename;
-            //String longFilename = "/home/pedroj/Desktop/server/metrics" +  File.separator + filename;
+            //String longFilename = "/home/pedroj/Desktop/server2/metrics" +  File.separator + filename;
 
             File file =new File(longFilename);
 

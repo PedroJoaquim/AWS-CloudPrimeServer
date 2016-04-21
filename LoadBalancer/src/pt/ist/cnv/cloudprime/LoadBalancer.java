@@ -49,6 +49,7 @@ public class LoadBalancer {
 
     private void start() throws Exception {
 
+        LoadBalancer.instance = this;
         this.publicIP = getPublicIP();
         this.awsManager = new AWSManager(this.publicIP);
         this.workers.add(this.awsManager.startNewWorker());

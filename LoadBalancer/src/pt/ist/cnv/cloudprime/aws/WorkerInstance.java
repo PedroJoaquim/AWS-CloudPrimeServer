@@ -26,14 +26,16 @@ public class WorkerInstance {
     private CPUMetric cpuMetric;
     private long startTime;
     private String lbPublicIP;
+    private AWSManager awsmanager;
 
     private Map<Integer, WorkInfo> jobs = new ConcurrentHashMap<Integer, WorkInfo>();
 
-    public WorkerInstance(Instance instance, String lbPublicIP) {
+    public WorkerInstance(Instance instance, String lbPublicIP, AWSManager awsManager) {
         this.instance = instance;
         this.cpuMetric = new CPUMetric();
         this.lbPublicIP = lbPublicIP;
         this.startTime = System.currentTimeMillis();
+        this.awsmanager = awsManager;
     }
 
     public String getInstanceID(){
@@ -41,7 +43,14 @@ public class WorkerInstance {
     }
 
     public String getPublicIP(){
-        return this.instance.getPublicIpAddress();
+       String ip = this.instance.getPublicIpAddress();
+
+        if(ip == null){
+            this.awsmanager.updateInstance(this);
+            ip = this.instance.getPublicIpAddress();
+        }
+
+        return ip;
     }
 
     public String getState(){
@@ -97,5 +106,9 @@ public class WorkerInstance {
                 connection.disconnect();
             }
         }
+    }
+
+    public void setInstance(Instance instance) {
+        this.instance = instance;
     }
 }

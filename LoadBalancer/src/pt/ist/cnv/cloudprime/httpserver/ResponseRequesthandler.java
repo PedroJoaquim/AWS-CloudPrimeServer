@@ -4,7 +4,8 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import pt.ist.cnv.cloudprime.LoadBalancer;
 
-import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 
 /**
  * Created by Pedro Joaquim on 20-04-2016.
@@ -17,7 +18,14 @@ public class ResponseRequesthandler extends BaseHandler {
     @Override
     protected void executeRequest(HttpExchange httpExchange) {
 
-        String response = getURLParameter(URL_PARAMETER_NAME);
+        String response = null;
+
+        try {
+            response = URLDecoder.decode(getURLParameter(URL_PARAMETER_NAME), "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            response = null;
+        }
+
         String requestID = getURLParameter(URL_REQUEST_NAME);
 
         if(response == null || "".equals(response) || requestID == null || "".equals(requestID)){

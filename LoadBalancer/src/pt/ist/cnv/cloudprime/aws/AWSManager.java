@@ -6,12 +6,11 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.*;
 import com.amazonaws.services.ec2.AmazonEC2Client;
-import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.RunInstancesRequest;
-import com.amazonaws.services.ec2.model.RunInstancesResult;
-import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.*;
 
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -19,10 +18,10 @@ import java.util.List;
  */
 public class AWSManager {
 
-    private static final String AVAILABILITY_ZONE = "ec2.eu-central-1a.amazonaws.com";
-    private static final String AMI_ID = "ami-539c7d3c";
+    private static final String AVAILABILITY_ZONE = "ec2.eu-central-1.amazonaws.com";
+    private static final String AMI_ID = "ami-a48162cb";
     private static final String INSTANCE_TYPE = "t2.micro";
-    private static final String KEY_NAME = "cnvir_cloudprime";
+    private static final String KEY_NAME = "cnvir-cloudprime";
     private static final String SECURITY_GROUP = "CNV-SSH+HTTP";
     private static final long CW_OFFSET_MILI = 1000 * 60 * 10;
     private static final String CW_NAMESPACE = "AWS/EC2";
@@ -59,7 +58,6 @@ public class AWSManager {
      * @see com.amazonaws.ClientConfiguration
      */
     private void init() throws Exception {
-
 
         this.credentials = null;
 
@@ -99,7 +97,7 @@ public class AWSManager {
         RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
         Instance instance = runInstancesResult.getReservation().getInstances().get(0);
 
-        return new WorkerInstance(instance, lbPublicIP);
+        return new WorkerInstance(instance, this.lbPublicIP, this);
     }
 
 
@@ -141,4 +139,18 @@ public class AWSManager {
         }
     }
 
+    public void updateInstance(WorkerInstance w){
+        DescribeInstancesResult result= ec2.describeInstances();
+        List <Reservation> list  = result.getReservations();
+
+        for (Reservation res:list) {
+            List <Instance> instanceList = res.getInstances();
+            for(Instance i : instanceList){
+                if(i.getInstanceId().equals(w.getInstanceID())){
+                    w.setInstance(i);
+                    break;
+                }
+            }
+        }
+    }
 }
