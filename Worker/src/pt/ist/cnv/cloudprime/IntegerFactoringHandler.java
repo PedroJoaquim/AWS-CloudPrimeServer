@@ -52,7 +52,7 @@ class IntegerFactoringHandler implements HttpHandler {
             resultURL = "";
         }
 
-        String targetURL = "http://" + ip + ":80/r.html?r=" + resultURL + "&rid=" + requestID;
+        String targetURL = "http://" + ip + ":8000/r.html?r=" + resultURL + "&rid=" + requestID;
         String line;
 
         try {

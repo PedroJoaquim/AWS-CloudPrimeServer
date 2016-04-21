@@ -21,7 +21,9 @@ import java.util.concurrent.Executors;
 
 public class LoadBalancer {
 
-    public static final int GRACE_PERIOD = 60000; //1 minute
+    public static final int GRACE_PERIOD = 90000; //1 30 minute
+    private static final long AUTO_SCALER_SLEEP_TIME = 30000; //30 secs
+
     private static LoadBalancer instance = null;
 
     private Map<Integer, WorkerInstance> pendingRequests = new ConcurrentHashMap<Integer, WorkerInstance>();
@@ -56,8 +58,9 @@ public class LoadBalancer {
 
         Thread.sleep(GRACE_PERIOD);
 
-        startServer(80);
+        startServer(8000);
     }
+
 
     private synchronized int getRequestID(){
         return this.requestID++;
@@ -113,4 +116,5 @@ public class LoadBalancer {
 
         return in.readLine();
     }
+
 }
