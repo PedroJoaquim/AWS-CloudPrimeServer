@@ -22,14 +22,35 @@ import java.util.concurrent.Executors;
 public class LoadBalancer {
 
     public static final int GRACE_PERIOD = 90000; //1 30 minute
-    private static final long AUTO_SCALER_SLEEP_TIME = 30000; //30 secs
 
+    /**
+     * Singleton instance for Load Balancer
+     */
     private static LoadBalancer instance = null;
 
+    /**
+     * Map that associates a requestID to the worker that is handling that request
+     */
     private Map<Integer, WorkerInstance> pendingRequests = new ConcurrentHashMap<Integer, WorkerInstance>();
+
+    /**
+     * List with all worker instances
+     */
     private List<WorkerInstance> workers = new ArrayList<>();
+
+    /**
+     * object responsible for aws communications related issues
+     */
     private AWSManager awsManager = null;
+
+    /**
+     * current requestID var
+     */
     private int requestID = 1;
+
+    /**
+     * LoadBalancer public ip
+     */
     private String publicIP;
 
 
@@ -40,34 +61,36 @@ public class LoadBalancer {
 
 
     public static LoadBalancer getInstance(){
-
         if(instance == null){
             instance = new LoadBalancer();
         }
-
         return instance;
     }
 
-
+    /**
+     * Starts the web server to receive the requests
+     * And gets the machine public ip
+     */
     private void start() throws Exception {
 
         LoadBalancer.instance = this;
         this.publicIP = getPublicIP();
-        this.awsManager = new AWSManager(this.publicIP);
-        this.workers.add(this.awsManager.startNewWorker());
-
-        Thread.sleep(GRACE_PERIOD);
+        this.awsManager = AWSManager.getInstance();
+        this.awsManager.setLbPublicIP(this.publicIP);
 
         startServer(8000);
     }
 
-
+    /**
+     * Thread safe method to get a new unique requestID
+     */
     private synchronized int getRequestID(){
         return this.requestID++;
     }
 
     /**
-     * Function to start the load balancer
+     * Function to start the load balancer web server with a
+     * thread pool to handle the requests
      */
     private void startServer(int port) throws IOException {
 
@@ -105,10 +128,23 @@ public class LoadBalancer {
      * @param numberToFactor
      * @return the assigned instance to process the request
      */
-    private WorkerInstance chooseWorker(String numberToFactor) {
-        return workers.get(0); //todo hardcoded
+    private synchronized WorkerInstance chooseWorker(String numberToFactor) {
+        List<WorkerInstance> availableWorkers = getAvailableWorkers();
+
+        return availableWorkers.size() > 0 ? availableWorkers.get(0) : null;
     }
 
+
+
+    public List<WorkerInstance> getAvailableWorkers() {
+        List<WorkerInstance> result = new ArrayList<WorkerInstance>();
+        //todo
+        return result;
+    }
+
+    /**
+     * Function that finds the machine public ip using aws checkip service
+     */
     public String getPublicIP() throws IOException {
 
         URL whatismyip = new URL("http://checkip.amazonaws.com");
@@ -117,4 +153,15 @@ public class LoadBalancer {
         return in.readLine();
     }
 
+    /**
+     * Adds new workers to the list of available workers
+     */
+    public synchronized void addNewWorker(WorkerInstance wi) {
+        this.workers.add(wi);
+    }
+
+
+    public boolean canDecrease(WorkerInstance wi) {
+        return false; //todo
+    }
 }

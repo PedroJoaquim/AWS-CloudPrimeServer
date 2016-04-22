@@ -12,7 +12,17 @@ public class CPUMetric {
 
     private List<Datapoint> datapoints = new ArrayList<Datapoint>();
 
-    public void addDatapoint(Datapoint dp) {
-        datapoints.add(dp);
+    public CPUMetric(List<Datapoint> datapoints) {
+        this.datapoints = datapoints;
+    }
+
+    public double getValue(){
+        double result = 0;
+
+        for (Datapoint dp : this.datapoints) {
+            result += dp.getAverage();
+        }
+
+        return result / this.datapoints.size();
     }
 }

@@ -12,30 +12,26 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Created by Pedro Joaquim on 19-04-2016.
- */
 public class WorkerInstance {
 
     private static final String PORT = "8000";
 
     private Instance instance;
-    private CPUMetric cpuMetric;
+    private List<CPUMetric> cpuMetrics;
     private long startTime;
     private String lbPublicIP;
-    private AWSManager awsmanager;
-
     private Map<Integer, WorkInfo> jobs = new ConcurrentHashMap<Integer, WorkInfo>();
 
-    public WorkerInstance(Instance instance, String lbPublicIP, AWSManager awsManager) {
+    public WorkerInstance(Instance instance, String lbPublicIP) {
         this.instance = instance;
-        this.cpuMetric = new CPUMetric();
+        this.cpuMetrics = new ArrayList<CPUMetric>();
         this.lbPublicIP = lbPublicIP;
         this.startTime = System.currentTimeMillis();
-        this.awsmanager = awsManager;
     }
 
     public String getInstanceID(){
@@ -43,27 +39,21 @@ public class WorkerInstance {
     }
 
     public String getPublicIP(){
-       String ip = this.instance.getPublicIpAddress();
-
-        if(ip == null){
-            this.awsmanager.updateInstance(this);
-            ip = this.instance.getPublicIpAddress();
-        }
-
-        return ip;
+       return this.instance.getPublicIpAddress();
     }
 
     public String getState(){
         return this.instance.getState().getName();
     }
 
-    public void addDatapoint(Datapoint dp) {
-        this.cpuMetric.addDatapoint(dp);
+    public void addCPUMetrics(CPUMetric metric) {
+        this.cpuMetrics.add(metric);
     }
 
     public boolean isActive(){
-        return "running".equals(getState()) &&
-                startTime + LoadBalancer.GRACE_PERIOD <= System.currentTimeMillis();
+        return "running".equals(getState())                                             &&
+                startTime + LoadBalancer.GRACE_PERIOD <= System.currentTimeMillis()     &&
+                getPublicIP() != null;
     }
 
     public void doRequest(WorkInfo wi) {
@@ -111,4 +101,6 @@ public class WorkerInstance {
     public void setInstance(Instance instance) {
         this.instance = instance;
     }
+
+    public CPUMetric getLastCPUMetric() { return this.cpuMetrics.size() > 0 ? this.cpuMetrics.get(this.cpuMetrics.size() -1) : null;}
 }

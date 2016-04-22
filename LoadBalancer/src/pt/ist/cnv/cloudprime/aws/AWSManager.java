@@ -7,6 +7,7 @@ import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.*;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
+import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -30,21 +31,27 @@ public class AWSManager {
     private static final String CW_STATISTICS = "Average";
     private static final String MONITORING_AVAILABILITY_ZONE = "monitoring.eu-central-1a.amazonaws.com";
 
-    /*
-     * The ProfileCredentialsProvider will return your [default]
-     * credential profile by reading from the credentials file located at
-     * (~/.aws/credentials).
-     */
-    private AWSCredentials credentials;
+
+    private static AWSManager instance = null;
     private AmazonEC2Client ec2;
     private AmazonCloudWatchClient cloudWatch;
     private String lbPublicIP;
 
-    public AWSManager(String lbPublicIP) throws Exception {
-        this.lbPublicIP = lbPublicIP;
-        init();
+    public AWSManager()  {
+        try {
+            init();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
+    public static AWSManager getInstance(){
+        if(instance == null){
+            instance = new AWSManager();
+        }
+
+        return instance;
+    }
 
     /**
      * The only information needed to create a client are security credentials
@@ -59,7 +66,7 @@ public class AWSManager {
      */
     private void init() throws Exception {
 
-        this.credentials = null;
+        AWSCredentials credentials = null;
 
         try {
             credentials = new ProfileCredentialsProvider().getCredentials();
@@ -97,7 +104,7 @@ public class AWSManager {
         RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
         Instance instance = runInstancesResult.getReservation().getInstances().get(0);
 
-        return new WorkerInstance(instance, this.lbPublicIP, this);
+        return new WorkerInstance(instance, this.lbPublicIP);
     }
 
 
@@ -134,9 +141,7 @@ public class AWSManager {
         GetMetricStatisticsResult getMetricStatisticsResult = cloudWatch.getMetricStatistics(request);
         List<Datapoint> datapoints = getMetricStatisticsResult.getDatapoints();
 
-        for (Datapoint dp : datapoints) {
-            instance.addDatapoint(dp);
-        }
+        instance.addCPUMetrics(new CPUMetric(datapoints));
     }
 
     public void updateInstance(WorkerInstance w){
@@ -152,5 +157,9 @@ public class AWSManager {
                 }
             }
         }
+    }
+
+    public void setLbPublicIP(String lbPublicIP) {
+        this.lbPublicIP = lbPublicIP;
     }
 }
