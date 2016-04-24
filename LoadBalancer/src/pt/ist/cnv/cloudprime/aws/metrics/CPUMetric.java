@@ -17,12 +17,15 @@ public class CPUMetric {
     }
 
     public double getValue(){
-        double result = 0;
+
+        Datapoint maxDP = null;
 
         for (Datapoint dp : this.datapoints) {
-            result += dp.getAverage();
+            if(maxDP == null || dp.getTimestamp().getTime() > maxDP.getTimestamp().getTime()){
+                maxDP = dp;
+            }
         }
 
-        return result / this.datapoints.size();
+        return maxDP == null ? 0 : maxDP.getAverage();
     }
 }

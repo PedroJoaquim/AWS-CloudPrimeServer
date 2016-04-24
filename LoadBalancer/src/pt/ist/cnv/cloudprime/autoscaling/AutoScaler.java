@@ -4,6 +4,7 @@ import pt.ist.cnv.cloudprime.LoadBalancer;
 import pt.ist.cnv.cloudprime.aws.AWSManager;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
 import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
+import pt.ist.cnv.cloudprime.util.Config;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,20 +15,18 @@ import java.util.List;
  */
 public class AutoScaler {
 
-    private static final int MIN_INSTANCES_NR = 1;
-    private static final int MAX_INSTANCES_NR = 4;
-    private static final long AUTO_SCALER_SLEEP_TIME = 30000;
-
     private List<WorkerInstance> workers;
-    private List<Reading> readings;
+    private Reading reading;
     private AWSManager awsManager;
     private LoadBalancer lb;
+    private long lastRuleApplied;
 
     public AutoScaler(LoadBalancer lb) {
         this.lb = lb;
         this.awsManager = AWSManager.getInstance();
         this.workers = new ArrayList<WorkerInstance>();
-        this.readings = new ArrayList<Reading>();
+        this.reading = null;
+        this.lastRuleApplied = System.currentTimeMillis();
     }
 
     public void start(){
@@ -36,7 +35,7 @@ public class AutoScaler {
                 try {
                     initialize();
                     while(true){
-                        Thread.sleep(AUTO_SCALER_SLEEP_TIME);
+                        Thread.sleep(Config.AUTO_SCALER_SLEEP_TIME);
                         monitor();
                     }
                 } catch(InterruptedException e) {
@@ -47,7 +46,7 @@ public class AutoScaler {
     }
 
     private void initialize() {
-        for (int i = 0; i < MIN_INSTANCES_NR; i++) {
+        for (int i = 0; i < Config.MIN_INSTANCES_NR; i++) {
             WorkerInstance wi = this.awsManager.startNewWorker();
             addNewInstanceToLB(wi);
             this.workers.add(wi);
@@ -70,59 +69,57 @@ public class AutoScaler {
 
         double averageSystemCPU = 0, maxCPU = 0, minCPU = 100, aux;
         int nrInstances = this.workers.size();
+        WorkerInstance minCPUInstance = null;
 
         for (WorkerInstance wi:  this.workers) {
-            CPUMetric cpu = wi.getLastCPUMetric();
+            CPUMetric cpu = wi.getCpuMetric();
             if(cpu == null) continue;
 
             aux = cpu.getValue();
-            if(aux < minCPU) { minCPU = aux; }
-            if(aux > maxCPU) { maxCPU = aux; }
+            if(aux <= minCPU) { minCPU = aux; minCPUInstance = wi;}
+            if(aux >= maxCPU) { maxCPU = aux; }
             averageSystemCPU += aux;
         }
 
         averageSystemCPU = averageSystemCPU / nrInstances;
 
-        this.readings.add(new Reading(minCPU, maxCPU, averageSystemCPU, nrInstances));
-
-        if(readings.size() > 30){
-            Iterator<Reading> iterator = readings.iterator();
-            for (int i = 0; i < 15; i++) {
-                iterator.next();
-                iterator.remove();
-            }
-        }
+        this.reading = new Reading(minCPU, maxCPU, averageSystemCPU, nrInstances, minCPUInstance);
     }
 
 
     private void applyRules() {
 
-        if(matchesIncreaseRule()){
+        if(matchesIncreaseRule() && this.workers.size() < Config.MAX_INSTANCES_NR &&
+                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()){
 
             WorkerInstance wi = this.awsManager.startNewWorker();
             addNewInstanceToLB(wi);
+            this.workers.add(wi);
+            this.lastRuleApplied = System.currentTimeMillis();
 
-        }else if(matchesDecreaseRule()){
+        }else if(matchesDecreaseRule() && this.workers.size() > Config.MIN_INSTANCES_NR &&
+                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()){
 
             WorkerInstance wi = selectInstanceForDecrease();
             if(this.lb.canDecrease(wi)){
                 this.workers.remove(wi);
                 this.awsManager.terminateWorker(wi);
             }
+            this.lastRuleApplied = System.currentTimeMillis();
 
         }
     }
 
-    private WorkerInstance selectInstanceForDecrease() {
-        return null; //todo
-    }
-
     private boolean matchesDecreaseRule() {
-        return false; //todo
+        return reading != null && reading.getAverageSystemCPU() <= Config.DECREASE_CPU_LEVEL;
     }
 
     private boolean matchesIncreaseRule() {
-        return false; //todo
+        return reading != null && reading.getAverageSystemCPU() >= Config.INCREASE_CPU_LEVEL;
+    }
+
+    private WorkerInstance selectInstanceForDecrease() {
+        return reading.getMinCPUInstance();
     }
 
     private void addNewInstanceToLB(WorkerInstance wi){

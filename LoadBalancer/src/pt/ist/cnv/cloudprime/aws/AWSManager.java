@@ -9,10 +9,7 @@ import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.*;
 import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Created by Pedro Joaquim on 19-04-2016.
@@ -24,13 +21,13 @@ public class AWSManager {
     private static final String INSTANCE_TYPE = "t2.micro";
     private static final String KEY_NAME = "cnvir-cloudprime";
     private static final String SECURITY_GROUP = "CNV-SSH+HTTP";
-    private static final long CW_OFFSET_MILI = 1000 * 60 * 10;
+    private static final long CW_OFFSET_MILI = 1000 * 60 * 5;
     private static final String CW_NAMESPACE = "AWS/EC2";
     private static final String CW_METRIC = "CPUUtilization";
     private static final int CW_PERIOD = 60;
     private static final String CW_STATISTICS = "Average";
-    private static final String MONITORING_AVAILABILITY_ZONE = "monitoring.eu-central-1a.amazonaws.com";
-
+    private static final String MONITORING_AVAILABILITY_ZONE = "monitoring.eu-central-1.amazonaws.com";
+    private static final long ONE_HOUR = 1000 * 3600 * 24;
 
     private static AWSManager instance = null;
     private AmazonEC2Client ec2;
@@ -99,7 +96,8 @@ public class AWSManager {
                            .withMinCount(1)
                            .withMaxCount(1)
                            .withKeyName(KEY_NAME)
-                           .withSecurityGroups(SECURITY_GROUP);
+                           .withSecurityGroups(SECURITY_GROUP)
+                           .withMonitoring(true);
 
         RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
         Instance instance = runInstancesResult.getReservation().getInstances().get(0);
@@ -122,6 +120,7 @@ public class AWSManager {
     public void updateCloudWatchMetrics(WorkerInstance instance){
 
         if(!"running".equals(instance.getState())){
+            updateInstance(instance);
             return;
         }
 
@@ -135,16 +134,16 @@ public class AWSManager {
                                     .withPeriod(CW_PERIOD)
                                     .withMetricName(CW_METRIC)
                                     .withStatistics(CW_STATISTICS)
-                                    .withDimensions(instanceDimension)
+                                    .withDimensions(Arrays.asList(instanceDimension))
                                     .withEndTime(new Date());
 
         GetMetricStatisticsResult getMetricStatisticsResult = cloudWatch.getMetricStatistics(request);
         List<Datapoint> datapoints = getMetricStatisticsResult.getDatapoints();
 
-        instance.addCPUMetrics(new CPUMetric(datapoints));
+        instance.setCpuMetric(new CPUMetric(datapoints));
     }
 
-    public void updateInstance(WorkerInstance w){
+    public synchronized void updateInstance(WorkerInstance w){
         DescribeInstancesResult result= ec2.describeInstances();
         List <Reservation> list  = result.getReservations();
 

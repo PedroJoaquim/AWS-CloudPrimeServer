@@ -2,15 +2,21 @@ package pt.ist.cnv.cloudprime;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import pt.ist.cnv.cloudprime.autoscaling.AutoScaler;
 import pt.ist.cnv.cloudprime.aws.AWSManager;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
+import pt.ist.cnv.cloudprime.aws.metrics.PastRequest;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
 import pt.ist.cnv.cloudprime.httpserver.ReadRequestHandler;
 import pt.ist.cnv.cloudprime.httpserver.ResponseRequesthandler;
+import pt.ist.cnv.cloudprime.util.Config;
+import pt.ist.cnv.cloudprime.util.RequestFileParser;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -21,7 +27,6 @@ import java.util.concurrent.Executors;
 
 public class LoadBalancer {
 
-    public static final int GRACE_PERIOD = 90000; //1 30 minute
 
     /**
      * Singleton instance for Load Balancer
@@ -32,6 +37,11 @@ public class LoadBalancer {
      * Map that associates a requestID to the worker that is handling that request
      */
     private Map<Integer, WorkerInstance> pendingRequests = new ConcurrentHashMap<Integer, WorkerInstance>();
+
+    /**
+     * Map that contains the info about already processed requests their metrics
+     */
+    private Map<String, PastRequest> knownRequests = new ConcurrentHashMap<String, PastRequest>();
 
     /**
      * List with all worker instances
@@ -57,6 +67,7 @@ public class LoadBalancer {
     public static void main(String[] args) throws Exception {
         LoadBalancer lb = new LoadBalancer();
         lb.start();
+        new AutoScaler(lb).start();
     }
 
 
@@ -77,8 +88,37 @@ public class LoadBalancer {
         this.publicIP = getPublicIP();
         this.awsManager = AWSManager.getInstance();
         this.awsManager.setLbPublicIP(this.publicIP);
+        loadPastRequestsInfo();
 
         startServer(8000);
+    }
+
+    /**
+     * Function that reads all requests from filesystem storage
+     * Used when load balancer starts executing
+     */
+    private void loadPastRequestsInfo() {
+
+        File folder = new File(Config.STORAGE_DIR);
+
+        try {
+            for (File file :  folder.listFiles()) {
+                if (file.isFile()) {
+                    loadNewRequestFileInfo(file.getAbsolutePath());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Function used to add new entries to the known requests
+     * @param filePath the storage file path containing the information
+     */
+    private void loadNewRequestFileInfo(String filePath) throws IOException {
+        PastRequest pr = RequestFileParser.parse(filePath);
+        this.knownRequests.put(pr.getRequestNumber(), pr);
     }
 
     /**
@@ -102,14 +142,17 @@ public class LoadBalancer {
         System.out.println("LOAD BALANCER STARTED AND RUNNING ON: " + port);
     }
 
-    public void handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
+    public boolean handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
 
         WorkerInstance worker = chooseWorker(numberToFactor);
-        int requestID = getRequestID();
 
+        if(worker == null) return false;
+
+        int requestID = getRequestID();
         this.pendingRequests.put(requestID, worker);
 
         worker.doRequest(new WorkInfo(httpExchange, numberToFactor, requestID));
+        return true;
     }
 
     public HttpExchange endPendingRequest(int requestID){
@@ -129,16 +172,63 @@ public class LoadBalancer {
      * @return the assigned instance to process the request
      */
     private synchronized WorkerInstance chooseWorker(String numberToFactor) {
-        List<WorkerInstance> availableWorkers = getAvailableWorkers();
 
-        return availableWorkers.size() > 0 ? availableWorkers.get(0) : null;
+        int minLoadFactor = -1;
+        WorkerInstance minLoadInstance = null;
+
+        for (WorkerInstance wi:  getAvailableWorkers()) {
+            int loadFactor = calcLoadFactor(wi);
+
+            if(loadFactor <= minLoadFactor){
+                minLoadFactor = loadFactor;
+                minLoadInstance = wi;
+            }
+        }
+
+        return minLoadInstance;
     }
 
+    /**
+     * Function that calcs the load factor of an instance
+     * this factor takes into account measures as CPU Utilization
+     * current requests being handled and if the requests are already known the
+     * current calc stage
+     *
+     * @param wi the worker instance being analysed
+     * @return the resulting load factor
+     */
+
+    private int calcLoadFactor(WorkerInstance wi) {
+
+        int cpuUtilization = Double.valueOf(wi.getCpuMetric().getValue()).intValue();
+        int requestFactor = 0;
+
+        for (WorkInfo request: wi.getCurrentJobs()) {
+            if(!this.knownRequests.containsKey(request.getNumberToFactor())){
+                //static number for unknown requests
+                requestFactor += 50;
+                //plus instructions already executed complexity
+                requestFactor += 25 * Integer.valueOf((request.getAlreadyExecutedInstructions().divide(Config.INSTRUCTIONS_THRESHOLD)).toString());
+            }else{
+                //plus the percentage of the processed request
+                //advanced calculations will have lesser impact
+                requestFactor += Integer.valueOf(((request.getAlreadyExecutedInstructions().multiply(new BigInteger("100"))).divide(this.knownRequests.get(request.getNumberToFactor()).getTotalInstructions())).toString());
+            }
+        }
+
+        return ((cpuUtilization * 10) + requestFactor);
+    }
 
 
     public List<WorkerInstance> getAvailableWorkers() {
         List<WorkerInstance> result = new ArrayList<WorkerInstance>();
-        //todo
+
+        for(WorkerInstance wi : this.workers){
+            if(wi.isActive()){
+                result.add(wi);
+            }
+        }
+
         return result;
     }
 
@@ -161,7 +251,14 @@ public class LoadBalancer {
     }
 
 
-    public boolean canDecrease(WorkerInstance wi) {
-        return false; //todo
+    public synchronized boolean canDecrease(WorkerInstance wi) {
+
+        if(wi.getCurrentJobs().size() == 0){
+            this.workers.remove(wi);
+            return true;
+        }
+
+        wi.markInstanceToFinish();
+        return false;
     }
 }

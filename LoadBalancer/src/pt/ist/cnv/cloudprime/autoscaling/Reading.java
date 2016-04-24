@@ -1,5 +1,7 @@
 package pt.ist.cnv.cloudprime.autoscaling;
 
+import pt.ist.cnv.cloudprime.aws.WorkerInstance;
+
 /**
  * Created by ASUS on 22/04/2016.
  */
@@ -10,12 +12,14 @@ public class Reading {
     private double maxCPU;
     private double averageSystemCPU;
     private int instanceNumber;
+    private WorkerInstance minCPUInstance;
 
-    public Reading(double minCPU, double maxCPU, double averageSystemCPU, int instanceNumber) {
+    public Reading(double minCPU, double maxCPU, double averageSystemCPU, int instanceNumber, WorkerInstance minCPUInstance) {
         this.minCPU = minCPU;
         this.maxCPU = maxCPU;
         this.averageSystemCPU = averageSystemCPU;
         this.instanceNumber = instanceNumber;
+        this.minCPUInstance = minCPUInstance;
         this.readingTime = System.currentTimeMillis();
     }
 
@@ -57,5 +61,9 @@ public class Reading {
 
     public void setAverageSystemCPU(double averageSystemCPU) {
         this.averageSystemCPU = averageSystemCPU;
+    }
+
+    public WorkerInstance getMinCPUInstance() {
+        return minCPUInstance;
     }
 }

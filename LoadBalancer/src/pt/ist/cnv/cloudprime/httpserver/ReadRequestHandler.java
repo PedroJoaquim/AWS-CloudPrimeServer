@@ -22,7 +22,9 @@ public class ReadRequestHandler extends BaseHandler {
             writeResponseToClient(httpExchange, "Invalid Request", 400);
         }
 
-        LoadBalancer.getInstance().handleNewRequest(httpExchange, numberToFactor);
+        if(!LoadBalancer.getInstance().handleNewRequest(httpExchange, numberToFactor)){
+            writeResponseToClient(httpExchange, "No instances available to handle request", 400);
+        }
     }
 
 }
