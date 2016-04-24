@@ -108,7 +108,7 @@ public class RequestThread extends Thread {
 			postParams = "number=" + rndNumber + "&" + "complexity=" + this.complexity;
 			postData = postParams.getBytes("UTF-8");
 			
-			this.url = new URL("http://" + ipAddress + ":8000/f.html" + rndNumber);
+			this.url = new URL("http://" + ipAddress + ":8000/f.html");
 			this.conn = (HttpURLConnection) url.openConnection();
 			conn.setRequestMethod("POST");
 			conn.setDoOutput(true);
