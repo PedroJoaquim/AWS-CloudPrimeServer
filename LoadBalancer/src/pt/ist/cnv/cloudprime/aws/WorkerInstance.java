@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WorkerInstance {
 
-    private static final String PORT = "8000";
+
 
     private Instance instance;
     private CPUMetric cpuMetric;
@@ -29,7 +29,7 @@ public class WorkerInstance {
 
     public WorkerInstance(Instance instance, String lbPublicIP) {
         this.instance = instance;
-        this.cpuMetric = null;
+        this.cpuMetric = new CPUMetric(new ArrayList<Datapoint>());
         this.lbPublicIP = lbPublicIP;
         this.startTime = System.currentTimeMillis();
         this.markedToFinish = false;
@@ -79,7 +79,7 @@ public class WorkerInstance {
     private void sendGETRequest(String numberToFactor, int requestID){
 
         HttpURLConnection connection = null;
-        String targetURL = "http://" + getPublicIP() + ":" + PORT + "/f.html?n=" + numberToFactor + "&rid=" + requestID +"&ip=" + lbPublicIP;
+        String targetURL = "http://" + getPublicIP() + ":" + Config.WORKER_PORT + "/f.html?n=" + numberToFactor + "&rid=" + requestID +"&ip=" + lbPublicIP;
         String line;
 
         try {
@@ -89,11 +89,6 @@ public class WorkerInstance {
             connection.setRequestMethod("GET");
 
             BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-
-            while ((line = rd.readLine()) != null) {
-                //ignore
-            }
-
             rd.close();
 
         } catch (Exception e) {

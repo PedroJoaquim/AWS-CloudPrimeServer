@@ -28,8 +28,8 @@ public class RequestThread extends Thread {
 	}
 	
 	public void run(){
-		//methodGET();
-		methodPOST();
+		methodGET();
+		//methodPOST();
 	}
 	
 	public void start(){
@@ -37,7 +37,7 @@ public class RequestThread extends Thread {
 		t.start();
 	}
 		
-	private synchronized String generateNumber(){
+	private String generateNumber(){
 		int number = -1;
 		Random rnd = new Random();
 		int rangeMin = 0;
@@ -70,7 +70,7 @@ public class RequestThread extends Thread {
 		}
 	}
 	
-	private synchronized void methodGET(){
+	private void methodGET(){
 		String rndNumber = generateNumber();
 		BufferedReader reader = null;
 		String response = null;

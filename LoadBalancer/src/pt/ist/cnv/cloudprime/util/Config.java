@@ -11,6 +11,8 @@ public class Config {
     public static final int GRACE_PERIOD = 90000; //1 30 minute
     public static final String STORAGE_DIR = "D:\\Documents\\GitHub\\AWS-CloudPrimeServer\\LoadBalancer\\storage_files";
     public static final BigInteger INSTRUCTIONS_THRESHOLD = new BigInteger("1000000000");
+    public static final int LB_PORT = 8000;
+    public static final int WORKER_PORT = 8000;
     /**
      * AUTO SCALING
      */
@@ -23,11 +25,11 @@ public class Config {
     /*
      * INCREASE RULE
      */
-    public static final long INCREASE_CPU_LEVEL = 70;
+    public static final long INCREASE_CPU_LEVEL = 85;
 
     /*
      * DECREASE RULE
      */
-    public static final long DECREASE_CPU_LEVEL = 35;
+    public static final long DECREASE_CPU_LEVEL = 40;
 
 }

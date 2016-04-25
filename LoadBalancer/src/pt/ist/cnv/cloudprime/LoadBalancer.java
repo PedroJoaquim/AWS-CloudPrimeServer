@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import pt.ist.cnv.cloudprime.autoscaling.AutoScaler;
 import pt.ist.cnv.cloudprime.aws.AWSManager;
+import pt.ist.cnv.cloudprime.aws.LocalWorkerInstance;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
 import pt.ist.cnv.cloudprime.aws.metrics.PastRequest;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
@@ -90,7 +91,7 @@ public class LoadBalancer {
         this.awsManager.setLbPublicIP(this.publicIP);
         loadPastRequestsInfo();
 
-        startServer(8000);
+        startServer(Config.LB_PORT);
     }
 
     /**
@@ -179,7 +180,7 @@ public class LoadBalancer {
         for (WorkerInstance wi:  getAvailableWorkers()) {
             int loadFactor = calcLoadFactor(wi);
 
-            if(loadFactor <= minLoadFactor){
+            if(minLoadFactor == -1 || loadFactor <= minLoadFactor){
                 minLoadFactor = loadFactor;
                 minLoadInstance = wi;
             }
@@ -228,7 +229,6 @@ public class LoadBalancer {
                 result.add(wi);
             }
         }
-
         return result;
     }
 

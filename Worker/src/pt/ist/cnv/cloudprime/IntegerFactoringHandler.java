@@ -33,6 +33,8 @@ class IntegerFactoringHandler implements HttpHandler {
             return;
         }
 
+        writeResponseToClient(httpExchange, "OK", 200);
+
         System.out.println("[FACTORING][THREAD:" + Thread.currentThread().getId() + "] " + numberToFactor + "...");
         CloudPrimeIT.addThreadRequest(Thread.currentThread().getId(), numberToFactor);
         String result = IntegerFactoring.main(numberToFactor);

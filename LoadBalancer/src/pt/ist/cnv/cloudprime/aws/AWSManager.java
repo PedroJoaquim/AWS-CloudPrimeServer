@@ -17,7 +17,7 @@ import java.util.*;
 public class AWSManager {
 
     private static final String AVAILABILITY_ZONE = "ec2.eu-central-1.amazonaws.com";
-    private static final String AMI_ID = "ami-62c0230d";
+    private static final String AMI_ID = "ami-3b0ae954";
     private static final String INSTANCE_TYPE = "t2.micro";
     private static final String KEY_NAME = "cnvir-cloudprime";
     private static final String SECURITY_GROUP = "CNV-SSH+HTTP";
