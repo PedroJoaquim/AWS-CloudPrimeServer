@@ -15,11 +15,14 @@ import java.util.List;
  */
 public class AutoScaler {
 
+    private static AutoScaler instance;
+
     private List<WorkerInstance> workers;
     private Reading reading;
     private AWSManager awsManager;
     private LoadBalancer lb;
     private long lastRuleApplied;
+    private int requestsMissed;
 
     public AutoScaler(LoadBalancer lb) {
         this.lb = lb;
@@ -27,6 +30,12 @@ public class AutoScaler {
         this.workers = new ArrayList<WorkerInstance>();
         this.reading = null;
         this.lastRuleApplied = System.currentTimeMillis();
+        this.requestsMissed = 0;
+        AutoScaler.instance = this;
+    }
+
+    public static synchronized AutoScaler getInstance(){
+        return AutoScaler.instance;
     }
 
     public void start(){
@@ -89,24 +98,23 @@ public class AutoScaler {
 
     private void applyRules() {
 
-        if(matchesIncreaseRule() && this.workers.size() < Config.MAX_INSTANCES_NR &&
-                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()){
+        if ((getRequestsMissedAndReset() > Config.MAX_REQUESTS_MISSED) || (matchesIncreaseRule() && this.workers.size() < Config.MAX_INSTANCES_NR &&
+                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis())) {
 
             WorkerInstance wi = this.awsManager.startNewWorker();
             addNewInstanceToLB(wi);
             this.workers.add(wi);
             this.lastRuleApplied = System.currentTimeMillis();
 
-        }else if(matchesDecreaseRule() && this.workers.size() > Config.MIN_INSTANCES_NR &&
-                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()){
+        } else if (matchesDecreaseRule() && this.workers.size() > Config.MIN_INSTANCES_NR &&
+                lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()) {
 
             WorkerInstance wi = selectInstanceForDecrease();
-            if(this.lb.canDecrease(wi)){
+            if (this.lb.canDecrease(wi)) {
                 this.workers.remove(wi);
                 this.awsManager.terminateWorker(wi);
             }
             this.lastRuleApplied = System.currentTimeMillis();
-
         }
     }
 
@@ -124,5 +132,15 @@ public class AutoScaler {
 
     private void addNewInstanceToLB(WorkerInstance wi){
         this.lb.addNewWorker(wi);
+    }
+
+    public synchronized void newRequestMissed() {
+        this.requestsMissed++;
+    }
+
+    public synchronized int getRequestsMissedAndReset() {
+        int result =  requestsMissed;
+        this.requestsMissed = 0;
+        return result;
     }
 }

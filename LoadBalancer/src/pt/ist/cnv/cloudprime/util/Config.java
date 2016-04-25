@@ -17,7 +17,7 @@ public class Config {
      * AUTO SCALING
      */
 
-    public static final int MIN_INSTANCES_NR = 1;
+    public static final int MIN_INSTANCES_NR = 2;
     public static final int MAX_INSTANCES_NR = 4;
     public static final long AUTO_SCALER_SLEEP_TIME = 60000;
     public static final long TIME_BETWEEN_RULES = 60000;
@@ -25,11 +25,12 @@ public class Config {
     /*
      * INCREASE RULE
      */
-    public static final long INCREASE_CPU_LEVEL = 85;
+    public static final long INCREASE_CPU_LEVEL = 82;
 
     /*
      * DECREASE RULE
      */
     public static final long DECREASE_CPU_LEVEL = 40;
 
+    public static final int MAX_REQUESTS_MISSED = 2;
 }

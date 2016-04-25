@@ -86,12 +86,12 @@ public class RequestThread extends Thread {
 			//receive the number refactored
 			reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			response = reader.readLine();
-			System.out.println("**************************");
-			System.out.println("Thread ID: " + this.getId());
-			System.out.println("Complexiy: " + this.complexity);
-			System.out.println("Number: " + rndNumber);
-			System.out.println("Response: " + response);
-			System.out.println("**************************\n");					 
+			//System.out.println("**************************");
+			//System.out.println("Thread ID: " + this.getId());
+			//System.out.println("Complexiy: " + this.complexity);
+			//System.out.println("Number: " + rndNumber);
+			//System.out.println("Response: " + response);
+			//System.out.println("**************************\n");					 
 			
 		} catch (Exception e) {
 			e.printStackTrace();

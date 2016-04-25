@@ -2,6 +2,7 @@ package pt.ist.cnv.cloudprime.aws;
 
 import com.amazonaws.services.cloudwatch.model.Datapoint;
 import com.amazonaws.services.ec2.model.Instance;
+import pt.ist.cnv.cloudprime.autoscaling.AutoScaler;
 import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
 import pt.ist.cnv.cloudprime.util.Config;
@@ -63,7 +64,9 @@ public class WorkerInstance {
 
     public void doRequest(WorkInfo wi) {
         jobs.put(wi.getRequestID(), wi);
-        sendGETRequest(wi.getNumberToFactor(), wi.getRequestID());
+        if(!sendGETRequest(wi.getNumberToFactor(), wi.getRequestID())){
+            AutoScaler.getInstance().newRequestMissed();
+        }
     }
 
     public WorkInfo getWorkInfo(int requestID){
@@ -76,7 +79,7 @@ public class WorkerInstance {
 
     public List<WorkInfo> getCurrentJobs() { return new ArrayList<>(this.jobs.values()); }
 
-    private void sendGETRequest(String numberToFactor, int requestID){
+    private boolean sendGETRequest(String numberToFactor, int requestID){
 
         HttpURLConnection connection = null;
         String targetURL = "http://" + getPublicIP() + ":" + Config.WORKER_PORT + "/f.html?n=" + numberToFactor + "&rid=" + requestID +"&ip=" + lbPublicIP;
@@ -90,9 +93,10 @@ public class WorkerInstance {
 
             BufferedReader rd = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             rd.close();
+            return true;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            return false;
         } finally {
             if(connection != null) {
                 connection.disconnect();

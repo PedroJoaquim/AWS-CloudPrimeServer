@@ -72,7 +72,7 @@ public class LoadBalancer {
     }
 
 
-    public static LoadBalancer getInstance(){
+    public static synchronized LoadBalancer getInstance(){
         if(instance == null){
             instance = new LoadBalancer();
         }
@@ -148,6 +148,8 @@ public class LoadBalancer {
         WorkerInstance worker = chooseWorker(numberToFactor);
 
         if(worker == null) return false;
+
+        System.out.println("[WI ASSIGNED] " + worker.getInstanceID());
 
         int requestID = getRequestID();
         this.pendingRequests.put(requestID, worker);
