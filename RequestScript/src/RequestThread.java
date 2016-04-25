@@ -29,14 +29,18 @@ public class RequestThread extends Thread {
 	
 	public void run(){
 		methodGET();
-		//methodPOST();
+		RequestScript.addResponseReceived();
 	}
 	
 	public void start(){
 		t = new Thread(this);
 		t.start();
 	}
-		
+
+	public void joinThread(){
+		try{t.join();} catch(Exception e) {}
+	}
+
 	private String generateNumber(){
 		int number = -1;
 		Random rnd = new Random();

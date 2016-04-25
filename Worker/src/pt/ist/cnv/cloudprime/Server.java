@@ -11,7 +11,7 @@ public class Server {
     public void start(int port) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/f.html", new IntegerFactoringHandler());
-        server.setExecutor(Executors.newFixedThreadPool(5));
+        server.setExecutor(Executors.newCachedThreadPool());
         server.start();
         System.out.println("[SERVER START] RUNNING ON PORT: " + port);
     }
