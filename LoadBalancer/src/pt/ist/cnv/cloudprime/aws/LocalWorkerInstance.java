@@ -2,15 +2,9 @@ package pt.ist.cnv.cloudprime.aws;
 
 import com.amazonaws.services.ec2.model.Instance;
 import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
-import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
-import pt.ist.cnv.cloudprime.util.Config;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
+
 
 /**
  * Created by Pedro Joaquim on 25-04-2016.

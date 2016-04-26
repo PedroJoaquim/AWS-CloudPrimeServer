@@ -1,4 +1,4 @@
-package pt.ist.cnv.cloudprime.httpserver;
+package pt.ist.cnv.cloudprime.mss.httpserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -17,7 +17,7 @@ public abstract class BaseHandler implements HttpHandler {
     protected abstract void executeRequest(HttpExchange httpExchange);
 
     @Override
-    public void handle(HttpExchange httpExchange) throws IOException{
+    public void handle(HttpExchange httpExchange) throws IOException {
         readURLParameters(httpExchange);
         executeRequest(httpExchange);
     }
@@ -61,3 +61,4 @@ public abstract class BaseHandler implements HttpHandler {
         }
     }
 }
+

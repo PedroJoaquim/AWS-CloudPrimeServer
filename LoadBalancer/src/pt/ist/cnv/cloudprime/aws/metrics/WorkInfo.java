@@ -13,13 +13,13 @@ public class WorkInfo {
     private HttpExchange httpExchange;
     private String numberToFactor;
     private int requestID;
-    private BigInteger alreadyExecutedInstructions;
+    private RequestMetrics requestMetrics;
 
     public WorkInfo(HttpExchange httpExchange, String numberToFactor, int requestID) {
         this.httpExchange = httpExchange;
         this.numberToFactor = numberToFactor;
         this.requestID = requestID;
-        this.alreadyExecutedInstructions = new BigInteger("0");
+        this.requestMetrics = new RequestMetrics(numberToFactor);
     }
 
     public HttpExchange getHttpExchange() {
@@ -34,11 +34,7 @@ public class WorkInfo {
         return requestID;
     }
 
-    public BigInteger getAlreadyExecutedInstructions() {
-        return alreadyExecutedInstructions;
-    }
-
-    public void setAlreadyExecutedInstructions(BigInteger alreadyExecutedInstructions) {
-        this.alreadyExecutedInstructions = alreadyExecutedInstructions;
+    public RequestMetrics getRequestMetrics() {
+        return requestMetrics;
     }
 }

@@ -1,26 +1,24 @@
-package pt.ist.cnv.cloudprime.aws.metrics;
+package pt.ist.cnv.cloudprime.mss.metrics;
+
+import org.json.simple.JSONObject;
 
 import java.math.BigInteger;
 
 /**
- * Created by Pedro Joaquim on 24-04-2016.
+ * Created by Pedro Joaquim on 26-04-2016.
  */
-public class PastRequest {
+public class RequestMetrics extends AbstractMetric{
 
     private String requestNumber;
     private BigInteger totalInstructions;
     private BigInteger totalComparisons;
-    private BigInteger totalAllocations;
     private BigInteger totalFunctionCalls;
-    private BigInteger maxFunctionInvocationDeptj;
 
-    public PastRequest(String requestNumber, BigInteger totalInstructions, BigInteger totalComparisons, BigInteger totalAllocations, BigInteger totalFunctionCalls, BigInteger maxFunctionInvocationDeptj) {
+    public RequestMetrics(String requestNumber, BigInteger totalInstructions, BigInteger totalComparisons, BigInteger totalFunctionCalls) {
         this.requestNumber = requestNumber;
         this.totalInstructions = totalInstructions;
         this.totalComparisons = totalComparisons;
-        this.totalAllocations = totalAllocations;
         this.totalFunctionCalls = totalFunctionCalls;
-        this.maxFunctionInvocationDeptj = maxFunctionInvocationDeptj;
     }
 
     public String getRequestNumber() {
@@ -47,13 +45,7 @@ public class PastRequest {
         this.totalComparisons = totalComparisons;
     }
 
-    public BigInteger getTotalAllocations() {
-        return totalAllocations;
-    }
 
-    public void setTotalAllocations(BigInteger totalAllocations) {
-        this.totalAllocations = totalAllocations;
-    }
 
     public BigInteger getTotalFunctionCalls() {
         return totalFunctionCalls;
@@ -63,11 +55,17 @@ public class PastRequest {
         this.totalFunctionCalls = totalFunctionCalls;
     }
 
-    public BigInteger getMaxFunctionInvocationDeptj() {
-        return maxFunctionInvocationDeptj;
-    }
 
-    public void setMaxFunctionInvocationDeptj(BigInteger maxFunctionInvocationDeptj) {
-        this.maxFunctionInvocationDeptj = maxFunctionInvocationDeptj;
+
+    @Override
+    public JSONObject toJSON() {
+        JSONObject jsonObj = new JSONObject();
+        jsonObj.put("type", 1);
+        jsonObj.put("request_number", requestNumber.toString());
+        jsonObj.put("total_instructions", totalInstructions.toString());
+        jsonObj.put("total_comparisons", totalComparisons.toString());
+        jsonObj.put("total_function_calls", totalFunctionCalls.toString());
+        return jsonObj;
+
     }
 }

@@ -9,7 +9,6 @@ import java.math.BigInteger;
 public class Config {
 
     public static final int GRACE_PERIOD = 90000; //1 30 minute
-    public static final String STORAGE_DIR = "D:\\Documents\\GitHub\\AWS-CloudPrimeServer\\LoadBalancer\\storage_files";
     public static final BigInteger INSTRUCTIONS_THRESHOLD = new BigInteger("1000000000");
     public static final int LB_PORT = 8000;
     public static final int WORKER_PORT = 8000;

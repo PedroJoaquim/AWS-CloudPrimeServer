@@ -6,7 +6,7 @@ public class RequestScript {
 
     public static void main(String[] args) throws InterruptedException{
         
-    	if(args.length < 4){
+    	if(args.length <  4){
     		System.out.println("Usage: java RequestScript complexity nr_requests lb_ipaddr request_interval");
 		return;
     	}

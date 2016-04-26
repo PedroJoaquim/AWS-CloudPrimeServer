@@ -4,20 +4,16 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import pt.ist.cnv.cloudprime.autoscaling.AutoScaler;
 import pt.ist.cnv.cloudprime.aws.AWSManager;
-import pt.ist.cnv.cloudprime.aws.LocalWorkerInstance;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
-import pt.ist.cnv.cloudprime.aws.metrics.PastRequest;
+import pt.ist.cnv.cloudprime.aws.metrics.RequestMetrics;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
 import pt.ist.cnv.cloudprime.httpserver.ReadRequestHandler;
 import pt.ist.cnv.cloudprime.httpserver.ResponseRequesthandler;
 import pt.ist.cnv.cloudprime.util.Config;
-import pt.ist.cnv.cloudprime.util.RequestFileParser;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -42,7 +38,7 @@ public class LoadBalancer {
     /**
      * Map that contains the info about already processed requests their metrics
      */
-    private Map<String, PastRequest> knownRequests = new ConcurrentHashMap<String, PastRequest>();
+    private Map<String, RequestMetrics> knownRequests = new ConcurrentHashMap<String, RequestMetrics>();
 
     /**
      * List with all worker instances
@@ -100,7 +96,7 @@ public class LoadBalancer {
      */
     private void loadPastRequestsInfo() {
 
-        File folder = new File(Config.STORAGE_DIR);
+     /*  File folder = new File(Config.STORAGE_DIR);
 
         try {
             for (File file :  folder.listFiles()) {
@@ -110,17 +106,9 @@ public class LoadBalancer {
             }
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
-    /**
-     * Function used to add new entries to the known requests
-     * @param filePath the storage file path containing the information
-     */
-    private void loadNewRequestFileInfo(String filePath) throws IOException {
-        PastRequest pr = RequestFileParser.parse(filePath);
-        this.knownRequests.put(pr.getRequestNumber(), pr);
-    }
 
     /**
      * Thread safe method to get a new unique requestID
@@ -208,15 +196,11 @@ public class LoadBalancer {
 
         for (WorkInfo request: wi.getCurrentJobs()) {
             if(!this.knownRequests.containsKey(request.getNumberToFactor())){
-                //static number for unknown requests
-                requestFactor += 50;
-                //plus instructions already executed complexity
-                requestFactor += 25 * Integer.valueOf((request.getAlreadyExecutedInstructions().divide(Config.INSTRUCTIONS_THRESHOLD)).toString());
-            }else{
-                //plus the percentage of the processed request
-                //advanced calculations will have lesser impact
-                requestFactor += Integer.valueOf(((request.getAlreadyExecutedInstructions().multiply(new BigInteger("100"))).divide(this.knownRequests.get(request.getNumberToFactor()).getTotalInstructions())).toString());
+                //for unknown requests
+                requestFactor += 100;
             }
+
+            requestFactor += request.getRequestMetrics().calcRequestComplexity();
         }
 
         return ((cpuUtilization * 10) + requestFactor);
