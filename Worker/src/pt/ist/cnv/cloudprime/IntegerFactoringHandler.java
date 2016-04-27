@@ -29,7 +29,7 @@ class IntegerFactoringHandler implements HttpHandler {
         String lbIP = getResponseIP(httpExchange);
         
         if(!isValid(numberToFactor) || lbIP == null || requestID == null){
-            writeResponseToClient(httpExchange, "usage: http://.../f.html?n=(number to factor)", 400);
+            writeResponseToClient(httpExchange, "usage: http://.../f.html?n=(number to factor)&rid=(requestID)&ip=(lb ip)", 400);
             return;
         }
 

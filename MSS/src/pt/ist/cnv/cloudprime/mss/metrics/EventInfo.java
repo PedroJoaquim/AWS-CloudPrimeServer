@@ -12,25 +12,19 @@ import java.math.BigInteger;
  */
 public class EventInfo extends AbstractMetric{
 
-    private int requestID;
+    private String requestID;
     private String metricName;
     private String metricValue;
-
-    public EventInfo(int requestID, String metricName, String metricValue) {
-        this.requestID = requestID;
-        this.metricName = metricName;
-        this.metricValue = metricValue;
-    }
 
     public EventInfo() {
 
     }
 
-    public int getRequestID() {
+    public String getRequestID() {
         return requestID;
     }
 
-    public void setRequestID(int requestID) {
+    public void setRequestID(String requestID) {
         this.requestID = requestID;
     }
 
@@ -64,12 +58,10 @@ public class EventInfo extends AbstractMetric{
     public AbstractMetric fromJSON(String json) {
 
         try {
-
             JSONObject jsonObj = (JSONObject) new JSONParser().parse(json);
             this.metricName = (String) jsonObj.get("metric_name");
             this.metricValue = (String) jsonObj.get("metric_value");
-            this.requestID = Integer.valueOf((String) jsonObj.get("request_id"));
-
+            this.requestID = (String) jsonObj.get("request_id");
         } catch (ParseException e) {
             e.printStackTrace();
         }

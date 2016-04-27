@@ -16,7 +16,7 @@ public class Config {
      * AUTO SCALING
      */
 
-    public static final int MIN_INSTANCES_NR = 2;
+    public static final int MIN_INSTANCES_NR = 1;
     public static final int MAX_INSTANCES_NR = 4;
     public static final long AUTO_SCALER_SLEEP_TIME = 60000;
     public static final long TIME_BETWEEN_RULES = 60000;

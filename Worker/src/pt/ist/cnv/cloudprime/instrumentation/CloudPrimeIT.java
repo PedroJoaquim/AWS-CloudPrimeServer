@@ -18,6 +18,8 @@ public class CloudPrimeIT {
     private static HashMap<Long, String> threadRequestNumber = new HashMap<Long, String>();
     private static HashMap<Long, String> threadRequestID = new HashMap<Long, String>();
     private static String MSS_IP;
+    private static final int REQUEST_INFO_TYPE = 1;
+    private static final int EVENT_INFO_TYPE = 2;
 
     public static void main(String argv[]) {
 
@@ -123,16 +125,16 @@ public class CloudPrimeIT {
                 JSONObject jsonObj = new JSONObject();
                 jsonObj.put("metric_name", "comparisons");
                 jsonObj.put("metric_value", "" + tm.getCompCount());
-                jsonObj.put("request_id", tm.getRequest());
-                sendToMSSAsync(1, jsonObj.toString());
+                jsonObj.put("request_id", tm.getRequestID());
+                sendToMSSAsync(EVENT_INFO_TYPE, jsonObj.toString());
             }
 
             if(tm.incICount(instructionsNumber)){ //has reached the threshold
                 JSONObject jsonObj = new JSONObject();
                 jsonObj.put("metric_name", "total_instructions");
                 jsonObj.put("metric_value", "" + tm.getiCount());
-                jsonObj.put("request_id", tm.getRequest());
-                sendToMSSAsync(1, jsonObj.toString());
+                jsonObj.put("request_id", tm.getRequestID());
+                sendToMSSAsync(EVENT_INFO_TYPE, jsonObj.toString());
             }
 
         }
@@ -149,8 +151,8 @@ public class CloudPrimeIT {
                 JSONObject jsonObj = new JSONObject();
                 jsonObj.put("metric_name", "functions_call");
                 jsonObj.put("metric_value", "" + tm.getFunctionCallsCount());
-                jsonObj.put("request_id", tm.getRequest());
-                sendToMSSAsync(1, jsonObj.toString());
+                jsonObj.put("request_id", tm.getRequestID());
+                sendToMSSAsync(EVENT_INFO_TYPE, jsonObj.toString());
             }
         }
 
@@ -188,16 +190,16 @@ public class CloudPrimeIT {
             ThreadMetrics tm = getThreadMetrics(threadID);
             JSONObject objJSON = new JSONObject();
 
-            objJSON.put("request_number", tm.getRequest());
-            objJSON.put("total_instructions", tm.getiCount());
-            objJSON.put("total_comparisons", tm.getCompCount());
-            objJSON.put("total_function_calls", tm.getFunctionCallsCount());
+            objJSON.put("request_number",  tm.getRequest());
+            objJSON.put("total_instructions", "" + tm.getiCount());
+            objJSON.put("total_comparisons", "" + tm.getCompCount());
+            objJSON.put("total_function_calls", "" + tm.getFunctionCallsCount());
 
-            sendToMSSAsync(1, objJSON.toString());
+            sendToMSSAsync(REQUEST_INFO_TYPE, objJSON.toString());
         }
     }
 
-    private static void sendToMSSAsync(int type, String json) {
+    private static void sendToMSSAsync(final int type, final String json) {
 
         new Thread() {
             public void run() {

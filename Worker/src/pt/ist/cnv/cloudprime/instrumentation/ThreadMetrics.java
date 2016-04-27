@@ -3,8 +3,8 @@ package pt.ist.cnv.cloudprime.instrumentation;
 public class ThreadMetrics {
 
     private static final long INSTRUCTIONS_THRESHHOLD = 1000000000;
-    private static final long COMPARISSONS_THRESHHOLD = 1000000000;
-    private static final long FUNCTION_CALSS_THRESHHOLD = 1000000000;
+    private static final long COMPARISSONS_THRESHHOLD = 100000000;
+    private static final long FUNCTION_CALSS_THRESHHOLD = 250000000;
 
     private long iCount;
     private long compCount;
