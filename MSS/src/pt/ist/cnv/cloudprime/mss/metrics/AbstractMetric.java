@@ -6,4 +6,5 @@ import org.json.simple.JSONObject;
 public abstract class AbstractMetric {
 
     public abstract JSONObject toJSON();
+    public abstract AbstractMetric fromJSON(String json);
 }

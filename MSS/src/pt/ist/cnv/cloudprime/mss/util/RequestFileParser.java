@@ -14,27 +14,12 @@ import java.math.BigInteger;
 public class RequestFileParser {
 
 
-    private static final String TOTAL_INSTRUCTIONS = "TOTAL INSTRUCTIONS";
-    private static final String TOTAL_COMPARISONS = "TOTAL COMPARISONS";
-    private static final String TOTAL_FUNCTION_CALLS = "TOTAL FUNCTION CALLS";
-
     public static RequestMetrics parse(String filePath) throws IOException {
 
-        String requestNumber = readRequestNumber(filePath);
         String fileContents = readFileContents(filePath);
-
-        String totalInstructions = readFileSegment(fileContents, TOTAL_INSTRUCTIONS);
-        String totalComparissons = readFileSegment(fileContents, TOTAL_COMPARISONS);
-        String totalFunctionCalls = readFileSegment(fileContents, TOTAL_FUNCTION_CALLS);
-
-        return new RequestMetrics(requestNumber, new BigInteger(totalInstructions),
-                new BigInteger(totalComparissons),  new BigInteger(totalFunctionCalls));
+        return (RequestMetrics) new RequestMetrics().fromJSON(fileContents);
     }
 
-
-    private static String readRequestNumber(String filePath){
-        return filePath.substring(filePath.lastIndexOf(File.separator) + 1, filePath.lastIndexOf('.'));
-    }
 
     private static String readFileContents(String filePath) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(filePath));
@@ -51,17 +36,5 @@ public class RequestFileParser {
         } finally {
             br.close();
         }
-    }
-
-    private static String readFileSegment (String fileContents, String segment){
-        String[] fileSegments = fileContents.split("\\|");
-
-        for (int i = 0; i < fileSegments.length; i++ ) {
-            if(fileSegments[i].contains(segment)){
-                return fileSegments[i+1].substring(fileSegments[i+1].lastIndexOf("=") + 1, fileSegments[i+1].lastIndexOf("\n"));
-            }
-        }
-
-        return "";
     }
 }

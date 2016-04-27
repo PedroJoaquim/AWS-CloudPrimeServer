@@ -1,8 +1,11 @@
 package pt.ist.cnv.cloudprime.instrumentation;
 
 import BIT.highBIT.*;
+import org.json.simple.JSONObject;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
 
 
@@ -10,9 +13,11 @@ import java.util.*;
 public class CloudPrimeIT {
 
     private static final String THIS_CLASS = "pt/ist/cnv/cloudprime/instrumentation/CloudPrimeIT";
-    private static final String METRICS_FILENAME = "metrics.txt";
+    private static final int MSS_PORT = 9000;
     private static HashMap<Long, ThreadMetrics> threadMetrics = new HashMap<Long, ThreadMetrics>();
-    private static HashMap<Long, String> threadRequest = new HashMap<Long, String>();
+    private static HashMap<Long, String> threadRequestNumber = new HashMap<Long, String>();
+    private static HashMap<Long, String> threadRequestID = new HashMap<Long, String>();
+    private static String MSS_IP;
 
     public static void main(String argv[]) {
 
@@ -94,8 +99,10 @@ public class CloudPrimeIT {
     }
 
 
-    public static void addThreadRequest(Long threadID, String request){
-        threadRequest.put(threadID, request);
+    public static synchronized void addThreadRequest(Long threadID, String request, String requestID, String mssIp){
+        threadRequestNumber.put(threadID, request);
+        threadRequestID.put(threadID, requestID);
+        MSS_IP = mssIp;
     }
 
     public static void addInstructionMetrics(String iInfo)
@@ -111,9 +118,21 @@ public class CloudPrimeIT {
             ThreadMetrics tm = getThreadMetrics(threadID);
 
             tm.incAllocCount(allocationInstructions);
-            tm.incCompCount(comparisonInstructions);
+
+            if(tm.incCompCount(comparisonInstructions)){
+                JSONObject jsonObj = new JSONObject();
+                jsonObj.put("metric_name", "comparisons");
+                jsonObj.put("metric_value", "" + tm.getCompCount());
+                jsonObj.put("request_id", tm.getRequest());
+                sendToMSSAsync(1, jsonObj.toString());
+            }
+
             if(tm.incICount(instructionsNumber)){ //has reached the threshold
-                appendToFile(METRICS_FILENAME, "[INSTRUCTIONS THRESHOLD REACHED] | THREAD=" + tm.getThreadID() +" | VALUE=" + tm.getiCount() + "\n");
+                JSONObject jsonObj = new JSONObject();
+                jsonObj.put("metric_name", "total_instructions");
+                jsonObj.put("metric_value", "" + tm.getiCount());
+                jsonObj.put("request_id", tm.getRequest());
+                sendToMSSAsync(1, jsonObj.toString());
             }
 
         }
@@ -125,7 +144,14 @@ public class CloudPrimeIT {
 
         synchronized (CloudPrimeIT.class) {
             ThreadMetrics tm = getThreadMetrics(threadID);
-            tm.incFunctionCalls();
+
+            if(tm.incFunctionCalls()){
+                JSONObject jsonObj = new JSONObject();
+                jsonObj.put("metric_name", "functions_call");
+                jsonObj.put("metric_value", "" + tm.getFunctionCallsCount());
+                jsonObj.put("request_id", tm.getRequest());
+                sendToMSSAsync(1, jsonObj.toString());
+            }
         }
 
     }
@@ -143,13 +169,14 @@ public class CloudPrimeIT {
     public static void startNewRequest(int ignore){
 
         long threadID = Thread.currentThread().getId();
-        String request = threadRequest.get(threadID);
+        String request = threadRequestNumber.get(threadID);
+        String requestID = threadRequestID.get(threadID);
 
         synchronized (CloudPrimeIT.class) {
             ThreadMetrics tm = getThreadMetrics(threadID);
             tm.resetMetrics();
             tm.setRequest(request);
-            appendToFile(METRICS_FILENAME, "[START REQUEST] | THREAD=" + threadID + " | NUMBER= " + request + "\n");
+            tm.setRequestID(requestID);
         }
     }
 
@@ -159,39 +186,54 @@ public class CloudPrimeIT {
 
         synchronized (CloudPrimeIT.class){
             ThreadMetrics tm = getThreadMetrics(threadID);
-            String filename = tm.getRequest() + ".txt";
-            appendToFile(filename, "[TOTAL INSTRUCTIONS]   | VALUE=" + tm.getiCount() + "\n");
-            appendToFile(filename, "[TOTAL COMPARISONS]    | VALUE=" + tm.getCompCount() + "\n");
-            appendToFile(filename, "[TOTAL ALLOCATIONS]    | VALUE=" + tm.getAllocCount() + "\n");
-            appendToFile(filename, "[TOTAL FUNCTION CALLS] | VALUE=" + tm.getFunctionCallsCount() + "\n");
-            appendToFile(filename, "[MAX FUNCTION INVOCATION DEPTH] | VALUE=" + tm.getMaxInvocationDepth() + "\n");
-            appendToFile(METRICS_FILENAME, "[END REQUEST]  | THREAD=" + threadID + " | NUMBER=" + tm.getRequest() + "\n");
+            JSONObject objJSON = new JSONObject();
+
+            objJSON.put("request_number", tm.getRequest());
+            objJSON.put("total_instructions", tm.getiCount());
+            objJSON.put("total_comparisons", tm.getCompCount());
+            objJSON.put("total_function_calls", tm.getFunctionCallsCount());
+
+            sendToMSSAsync(1, objJSON.toString());
         }
     }
 
+    private static void sendToMSSAsync(int type, String json) {
 
-     private static void appendToFile(String filename, String content){
-        try{
-            
-            String longFilename = "/home/ec2-user/cloud-prime-server/metrics" +  File.separator + filename;
-            //String longFilename = "/home/pedroj/Desktop/cnv/cloud-prime/metrics" +  File.separator + filename;
-            //String longFilename = "/home/pedroj/Desktop/server2/metrics" +  File.separator + filename;
+        new Thread() {
+            public void run() {
+                try{
+                    byte[] body = json.getBytes("UTF-8");
+                    URL url = new URL("http://" + MSS_IP + ":" + MSS_PORT + "/requestInfo?type=" + type);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-            File file =new File(longFilename);
+                    conn.setRequestMethod("POST");
+                    conn.setDoOutput(true);
+                    conn.setRequestProperty( "Content-Type", "application/x-www-form-urlencoded");
+                    conn.setRequestProperty( "charset", "utf-8");
+                    conn.setRequestProperty( "Content-Length", Integer.toString(body.length));
 
-            if(!file.exists()){
-                file.createNewFile();
+                    DataOutputStream wr = new DataOutputStream(conn.getOutputStream());
+                    wr.write(body);
+                    wr.flush();
+                    wr.close();
+
+                    BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    String inputLine;
+
+
+                    while ((inputLine = in.readLine()) != null) {
+                        //ignore
+                    }
+
+                    in.close();
+
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
-
-            FileWriter fileWritter = new FileWriter(longFilename,true);
-            BufferedWriter bufferWritter = new BufferedWriter(fileWritter);
-            bufferWritter.write(content);
-            bufferWritter.close();
-
-        }catch(IOException e){
-            e.printStackTrace();
-        }
+        }.start();
     }
+
 
     private static ThreadMetrics getThreadMetrics(long id) {
 
@@ -208,6 +250,4 @@ public class CloudPrimeIT {
     private static void printUsage() {
         System.out.println("usage: java CloudPrimeIT <dir> <output_dir>");
     }
-
-
 }

@@ -1,6 +1,9 @@
 package pt.ist.cnv.cloudprime.mss.metrics;
 
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import pt.ist.cnv.cloudprime.mss.util.Config;
 
 import java.math.BigInteger;
 
@@ -19,6 +22,10 @@ public class RequestMetrics extends AbstractMetric{
         this.totalInstructions = totalInstructions;
         this.totalComparisons = totalComparisons;
         this.totalFunctionCalls = totalFunctionCalls;
+    }
+
+    public RequestMetrics() {
+
     }
 
     public String getRequestNumber() {
@@ -60,12 +67,31 @@ public class RequestMetrics extends AbstractMetric{
     @Override
     public JSONObject toJSON() {
         JSONObject jsonObj = new JSONObject();
-        jsonObj.put("type", 1);
+        jsonObj.put("type", Config.REQUEST_ID);
         jsonObj.put("request_number", requestNumber.toString());
         jsonObj.put("total_instructions", totalInstructions.toString());
         jsonObj.put("total_comparisons", totalComparisons.toString());
         jsonObj.put("total_function_calls", totalFunctionCalls.toString());
         return jsonObj;
 
+    }
+
+    @Override
+    public AbstractMetric fromJSON(String json) {
+
+
+        try {
+
+            JSONObject jsonObj = (JSONObject) new JSONParser().parse(json);
+            this.requestNumber = (String) jsonObj.get("request_number");
+            this.totalInstructions = new BigInteger((String) jsonObj.get("total_instructions"));
+            this.totalComparisons = new BigInteger((String) jsonObj.get("total_comparisons"));
+            this.totalFunctionCalls = new BigInteger((String) jsonObj.get("total_function_calls"));
+
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        return this;
     }
 }

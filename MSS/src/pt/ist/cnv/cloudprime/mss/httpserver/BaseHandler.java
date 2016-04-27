@@ -2,9 +2,9 @@ package pt.ist.cnv.cloudprime.mss.httpserver;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.json.simple.parser.ParseException;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.HashMap;
 
 
@@ -14,12 +14,17 @@ public abstract class BaseHandler implements HttpHandler {
     private HashMap<String, String> urlQueyParams = new HashMap<String, String>();
 
 
-    protected abstract void executeRequest(HttpExchange httpExchange);
+    protected abstract void executeRequest(HttpExchange httpExchange) throws IOException;
 
     @Override
     public void handle(HttpExchange httpExchange) throws IOException {
-        readURLParameters(httpExchange);
-        executeRequest(httpExchange);
+
+        try {
+            readURLParameters(httpExchange);
+            executeRequest(httpExchange);
+        } catch (Exception e){
+            writeResponseToClient(httpExchange, e.getMessage(), 400);
+        }
     }
 
 
@@ -48,6 +53,21 @@ public abstract class BaseHandler implements HttpHandler {
             }
         }
     }
+
+    protected String getRequestBody(HttpExchange httpExchange) throws IOException {
+        String body = "";
+        InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),"utf-8");
+        BufferedReader br = new BufferedReader(isr);
+        String line = br.readLine();
+
+        while(line != null){
+            body += line;
+            line = br.readLine();
+        }
+
+        return body;
+    }
+
 
     protected void writeResponseToClient(HttpExchange httpExchange, String result, int code) {
         try {

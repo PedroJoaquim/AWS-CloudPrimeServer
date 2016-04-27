@@ -1,6 +1,7 @@
 package pt.ist.cnv.cloudprime.mss;
 
 import com.sun.net.httpserver.HttpServer;
+import pt.ist.cnv.cloudprime.mss.httpserver.PostInfoHandler;
 import pt.ist.cnv.cloudprime.mss.httpserver.RequestInfoHandler;
 import pt.ist.cnv.cloudprime.mss.metrics.AbstractMetric;
 import pt.ist.cnv.cloudprime.mss.metrics.MetricsInfoContainer;
@@ -53,6 +54,7 @@ public class MSServer {
     private void startServer(int mssPort) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress(mssPort), 0);
         server.createContext("/info", new RequestInfoHandler());
+        server.createContext("/requestInfo", new PostInfoHandler());
         server.setExecutor(Executors.newCachedThreadPool());
         server.start();
         System.out.println("MSS STARTED AND RUNNING ON: " + mssPort);
@@ -67,6 +69,10 @@ public class MSServer {
         }
 
         return new MetricsInfoContainer(result);
+    }
+
+    public synchronized void addNewInfo(AbstractMetric m){
+        this.metricsInfo.add(m);
     }
 
     public int getLastUpdateID() {

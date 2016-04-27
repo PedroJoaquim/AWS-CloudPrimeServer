@@ -3,6 +3,8 @@ package pt.ist.cnv.cloudprime.instrumentation;
 public class ThreadMetrics {
 
     private static final long INSTRUCTIONS_THRESHHOLD = 1000000000;
+    private static final long COMPARISSONS_THRESHHOLD = 1000000000;
+    private static final long FUNCTION_CALSS_THRESHHOLD = 1000000000;
 
     private long iCount;
     private long compCount;
@@ -14,7 +16,11 @@ public class ThreadMetrics {
 
     private long threadID;
     private String request;
+    private String requestID;
+
     private int currentInstructionThreshold;
+    private int currentComparisonsThreshold;
+    private int currentFunctionsCallThreshold;
 
     public ThreadMetrics(long threadID) {
         this.iCount = 0;
@@ -25,6 +31,8 @@ public class ThreadMetrics {
         this.maxInvocationDepthAux = 0;
         this.threadID = threadID;
         this.currentInstructionThreshold = 1;
+        this.currentComparisonsThreshold = 1;
+        this.currentFunctionsCallThreshold = 1;
     }
 
     public void resetMetrics(){
@@ -47,21 +55,35 @@ public class ThreadMetrics {
         return false;
     }
 
-    public void incFunctionCalls() {
+    public boolean incFunctionCalls() {
         this.functionCallsCount++;
         this.maxInvocationDepthAux++;
 
         if(this.maxInvocationDepthAux > this.maxInvocationDepth){
             this.maxInvocationDepth = this.maxInvocationDepthAux;
         }
+
+        if(this.functionCallsCount >= FUNCTION_CALSS_THRESHHOLD * currentFunctionsCallThreshold){
+            currentFunctionsCallThreshold += 1;
+            return true;
+        }
+
+        return false;
     }
 
     public void incReturnFunction() {
         this.maxInvocationDepthAux--;
     }
 
-    public void incCompCount(long diff){
+    public boolean incCompCount(long diff){
         compCount += diff;
+
+        if(compCount >= COMPARISSONS_THRESHHOLD * currentComparisonsThreshold){
+            currentComparisonsThreshold += 1;
+            return true;
+        }
+
+        return false;
     }
 
     public void incAllocCount(long diff){
@@ -93,6 +115,13 @@ public class ThreadMetrics {
         this.request = request;
     }
 
+    public void setRequestID(String requestID) {
+        this.requestID = requestID;
+    }
+
+    public String getRequestID() {
+        return requestID;
+    }
 }
 
 
