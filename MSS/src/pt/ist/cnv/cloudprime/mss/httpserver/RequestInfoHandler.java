@@ -19,7 +19,7 @@ public class RequestInfoHandler extends BaseHandler {
         }
 
         JSONObject obj = new JSONObject();
-        obj.put("new_request_id", MSServer.getInstance().getLastUpdateID());
+        obj.put("new_update_id", MSServer.getInstance().getLastUpdateID());
         obj.put("updates", MSServer.getInstance().getUpdatesSince(lastUpdateID).toJSON());
 
         writeResponseToClient(httpExchange, obj.toString(), 200);

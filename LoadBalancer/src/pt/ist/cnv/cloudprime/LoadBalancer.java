@@ -9,11 +9,13 @@ import pt.ist.cnv.cloudprime.aws.metrics.RequestMetrics;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
 import pt.ist.cnv.cloudprime.httpserver.ReadRequestHandler;
 import pt.ist.cnv.cloudprime.httpserver.ResponseRequesthandler;
+import pt.ist.cnv.cloudprime.mss.MSSRequester;
 import pt.ist.cnv.cloudprime.util.Config;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -64,7 +66,6 @@ public class LoadBalancer {
     public static void main(String[] args) throws Exception {
         LoadBalancer lb = new LoadBalancer();
         lb.start();
-        new AutoScaler(lb).start();
     }
 
 
@@ -85,29 +86,13 @@ public class LoadBalancer {
         this.publicIP = getPublicIP();
         this.awsManager = AWSManager.getInstance();
         this.awsManager.setLbPublicIP(this.publicIP);
-        loadPastRequestsInfo();
 
         startServer(Config.LB_PORT);
+
+        new AutoScaler(this).start();
+        new MSSRequester(publicIP, this).start();
     }
 
-    /**
-     * Function that reads all requests from filesystem storage
-     * Used when load balancer starts executing
-     */
-    private void loadPastRequestsInfo() {
-
-     /*  File folder = new File(Config.STORAGE_DIR);
-
-        try {
-            for (File file :  folder.listFiles()) {
-                if (file.isFile()) {
-                    loadNewRequestFileInfo(file.getAbsolutePath());
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-    }
 
 
     /**
@@ -246,5 +231,17 @@ public class LoadBalancer {
 
         wi.markInstanceToFinish();
         return false;
+    }
+
+    public synchronized void addNewRequestMetrics(RequestMetrics requestMetrics) {
+        this.knownRequests.put(requestMetrics.getRequestNumber(), requestMetrics);
+    }
+
+    public synchronized void updateMetric(int requestID, String metricName, BigInteger metricValue) {
+
+        if(this.pendingRequests.containsKey(requestID)){
+            this.pendingRequests.get(requestID).updateMetricValue(requestID, metricName, metricValue);
+        }
+
     }
 }

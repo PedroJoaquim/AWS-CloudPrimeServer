@@ -32,4 +32,11 @@ public class Config {
     public static final long DECREASE_CPU_LEVEL = 40;
 
     public static final int MAX_REQUESTS_MISSED = 2;
+
+    /**
+     * MSS Requester
+     */
+
+    public static final long MSS_REQUEST_INTERVAL = 60 * 1000;
+    public static final int MSS_PORT = 9000;
 }

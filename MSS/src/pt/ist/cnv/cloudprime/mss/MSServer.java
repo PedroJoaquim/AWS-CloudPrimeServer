@@ -68,7 +68,7 @@ public class MSServer {
             result.add(this.metricsInfo.get(i));
         }
 
-        return new MetricsInfoContainer(result);
+        return new MetricsInfoContainer(result, lastUpdateID, this.metricsInfo.size());
     }
 
     public synchronized void addNewInfo(AbstractMetric m){

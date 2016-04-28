@@ -37,4 +37,16 @@ public class WorkInfo {
     public RequestMetrics getRequestMetrics() {
         return requestMetrics;
     }
+
+    public void updateMetric(String metricName, BigInteger metricValue) {
+        if("total_instructions".equals(metricName)){
+            this.requestMetrics.addTotalInstructions(metricValue);
+        }
+        else if("comparisons".equals(metricName)){
+            this.requestMetrics.addComparisons(metricValue);
+        }
+        else if("functions_call".equals(metricName)){
+            this.requestMetrics.addFunctionCalls(metricValue);
+        }
+    }
 }

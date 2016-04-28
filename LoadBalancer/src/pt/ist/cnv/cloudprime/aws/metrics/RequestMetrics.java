@@ -12,28 +12,22 @@ public class RequestMetrics {
     private String requestNumber;
     private BigInteger totalInstructions;
     private BigInteger totalComparisons;
-    private BigInteger totalAllocations;
     private BigInteger totalFunctionCalls;
-    private BigInteger maxFunctionInvocationDepth;
 
     private static final BigInteger ONE_HUNDRED = new BigInteger("100");
 
-    public RequestMetrics(String requestNumber, BigInteger totalInstructions, BigInteger totalComparisons, BigInteger totalAllocations, BigInteger totalFunctionCalls, BigInteger maxFunctionInvocationDepth) {
+    public RequestMetrics(String requestNumber, BigInteger totalInstructions, BigInteger totalComparisons, BigInteger totalFunctionCalls) {
         this.requestNumber = requestNumber;
         this.totalInstructions = totalInstructions;
         this.totalComparisons = totalComparisons;
-        this.totalAllocations = totalAllocations;
         this.totalFunctionCalls = totalFunctionCalls;
-        this.maxFunctionInvocationDepth = maxFunctionInvocationDepth;
     }
 
     public RequestMetrics(String requestNumber) {
         this.requestNumber = requestNumber;
         this.totalInstructions = new BigInteger("0");
         this.totalComparisons = new BigInteger("0");
-        this.totalAllocations = new BigInteger("0");
         this.totalFunctionCalls = new BigInteger("0");
-        this.maxFunctionInvocationDepth = new BigInteger("0");
     }
 
     /**
@@ -44,13 +38,13 @@ public class RequestMetrics {
 
     public int calcRequestComplexity(){
 
-        int result = 0;
+        if(totalInstructions.compareTo(BigInteger.ZERO) == 0){
+            return 0;
+        }
 
-        int instructionsFactor = Integer.valueOf(this.totalInstructions.divide(Config.INSTRUCTIONS_THRESHOLD).toString());
-
-        int comparisonsFactor = Integer.valueOf(this.totalComparisons.multiply(ONE_HUNDRED).divide(this.totalInstructions).toString());
-        int functionCallsFactor = Integer.valueOf(this.totalFunctionCalls.multiply(ONE_HUNDRED).divide(this.totalFunctionCalls).toString());
-
+        int instructionsFactor = Double.valueOf(this.totalInstructions.divide(Config.INSTRUCTIONS_THRESHOLD).toString()).intValue();
+        int comparisonsFactor = Double.valueOf(this.totalComparisons.multiply(ONE_HUNDRED).divide(totalInstructions).toString()).intValue();
+        int functionCallsFactor = Double.valueOf(this.totalFunctionCalls.multiply(ONE_HUNDRED).divide(totalInstructions).toString()).intValue();
         return instructionsFactor * 100 + (comparisonsFactor * 10) + (functionCallsFactor * 10);
     }
 
@@ -82,14 +76,6 @@ public class RequestMetrics {
         this.totalComparisons = totalComparisons;
     }
 
-    public BigInteger getTotalAllocations() {
-        return totalAllocations;
-    }
-
-    public void setTotalAllocations(BigInteger totalAllocations) {
-        this.totalAllocations = totalAllocations;
-    }
-
     public BigInteger getTotalFunctionCalls() {
         return totalFunctionCalls;
     }
@@ -98,11 +84,16 @@ public class RequestMetrics {
         this.totalFunctionCalls = totalFunctionCalls;
     }
 
-    public BigInteger getMaxFunctionInvocationDepth() {
-        return maxFunctionInvocationDepth;
+
+    public void addTotalInstructions(BigInteger metricValue) {
+        this.totalInstructions = this.totalInstructions.add(metricValue);
     }
 
-    public void setMaxFunctionInvocationDepth(BigInteger maxFunctionInvocationDepth) {
-        this.maxFunctionInvocationDepth = maxFunctionInvocationDepth;
+    public void addComparisons(BigInteger metricValue) {
+        this.totalComparisons = this.totalComparisons.add(metricValue);
+    }
+
+    public void addFunctionCalls(BigInteger metricValue) {
+        this.totalFunctionCalls = this.totalFunctionCalls.add(metricValue);
     }
 }

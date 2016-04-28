@@ -9,6 +9,7 @@ import pt.ist.cnv.cloudprime.util.Config;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -119,5 +120,9 @@ public class WorkerInstance {
     public void markInstanceToFinish() {
         this.markedToFinish = true;
         this.markTimestamp = System.currentTimeMillis();
+    }
+
+    public synchronized void updateMetricValue(int requestID, String metricName, BigInteger metricValue) {
+        this.jobs.get(requestID).updateMetric(metricName, metricValue);
     }
 }
