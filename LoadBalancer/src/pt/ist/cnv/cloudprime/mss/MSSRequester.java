@@ -20,6 +20,7 @@ public class MSSRequester {
     private String mssIP;
     private LoadBalancer lb;
     private long updateID;
+    private Thread mssThread;
 
     public MSSRequester(String mssIP, LoadBalancer lb) {
         this.mssIP = mssIP;
@@ -28,20 +29,22 @@ public class MSSRequester {
     }
 
     public void start(){
-        new Thread() {
+        this.mssThread = new Thread() {
             public void run() {
-                while(true){
+                while(!Thread.interrupted()){
                     try {
                         Thread.sleep(Config.MSS_REQUEST_INTERVAL);
                         requestAndUpdate();
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        //finish
                     } catch (ParseException e) {
                         e.printStackTrace();
                     }
                 }
             }
-        }.start();
+        };
+
+        this.mssThread.start();
     }
 
     private void requestAndUpdate() throws ParseException {
@@ -116,4 +119,7 @@ public class MSSRequester {
     }
 
 
+    public synchronized void terminate() {
+        this.mssThread.interrupt();
+    }
 }

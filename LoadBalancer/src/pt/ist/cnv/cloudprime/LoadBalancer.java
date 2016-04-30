@@ -21,7 +21,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class LoadBalancer {
@@ -62,10 +64,64 @@ public class LoadBalancer {
      */
     private String publicIP;
 
+    /**
+     * Http Server receiving the requests
+     */
+    private HttpServer server;
+
+    /**
+     * Http executor service threads receiving and responding to the requests
+     */
+
+    private ExecutorService threadPool;
+
+    /**
+     * AutoScaler responsible to increase and decrease workers
+     */
+    private AutoScaler autoScaler;
+
+    /**
+     * Entity responsible for Metrics Storage System queries
+     */
+    private MSSRequester mssRequest;
+
 
     public static void main(String[] args) throws Exception {
         LoadBalancer lb = new LoadBalancer();
         lb.start();
+        waitToFinish();
+    }
+
+    /**
+     * method reading user input waiting to read 'exit'
+     * to stop the load balancer gracefully
+     */
+    private static void waitToFinish() {
+        Scanner scanner = new Scanner(System.in);
+
+        while(true){
+            String cmd = scanner.nextLine();
+            if("exit".equals(cmd.toLowerCase())){
+                LoadBalancer.getInstance().terminate();
+                return;
+            }
+        }
+
+    }
+
+    /**
+     * Method to gracefully terminate the load balancer execution
+     * terminating all the worker instances and threads
+     */
+    private synchronized void terminate() {
+        for (WorkerInstance wi: workers) {
+            this.awsManager.terminateWorker(wi);
+        }
+
+        this.server.stop(1);
+        this.threadPool.shutdownNow();
+        this.autoScaler.terminate();
+        this.mssRequest.terminate();
     }
 
 
@@ -86,11 +142,13 @@ public class LoadBalancer {
         this.publicIP = getPublicIP();
         this.awsManager = AWSManager.getInstance();
         this.awsManager.setLbPublicIP(this.publicIP);
+        this.autoScaler = new AutoScaler(this);
+        this.mssRequest = new MSSRequester(publicIP, this);
 
         startServer(Config.LB_PORT);
 
-        new AutoScaler(this).start();
-        new MSSRequester(publicIP, this).start();
+        this.autoScaler.start();
+        this.mssRequest.start();
     }
 
 
@@ -108,10 +166,11 @@ public class LoadBalancer {
      */
     private void startServer(int port) throws IOException {
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        threadPool = Executors.newCachedThreadPool();
+        server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/f.html", new ReadRequestHandler());
         server.createContext("/r.html", new ResponseRequesthandler());
-        server.setExecutor(Executors.newCachedThreadPool());
+        server.setExecutor(threadPool);
         server.start();
         System.out.println("LOAD BALANCER STARTED AND RUNNING ON: " + port);
     }

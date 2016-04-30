@@ -23,6 +23,7 @@ public class AutoScaler {
     private LoadBalancer lb;
     private long lastRuleApplied;
     private int requestsMissed;
+    private Thread asThread;
 
     public AutoScaler(LoadBalancer lb) {
         this.lb = lb;
@@ -39,19 +40,21 @@ public class AutoScaler {
     }
 
     public void start(){
-        new Thread() {
+        this.asThread = new Thread() {
             public void run() {
                 try {
                     initialize();
-                    while(true){
+                    while(!Thread.interrupted()){
                         Thread.sleep(Config.AUTO_SCALER_SLEEP_TIME);
                         monitor();
                     }
                 } catch(InterruptedException e) {
-                    e.printStackTrace();
+                   //finish
                 }
             }
-        }.start();
+        };
+
+        this.asThread.start();
     }
 
     private void initialize() {
@@ -142,5 +145,9 @@ public class AutoScaler {
         int result =  requestsMissed;
         this.requestsMissed = 0;
         return result;
+    }
+
+    public synchronized void terminate() {
+        this.asThread.interrupt();
     }
 }

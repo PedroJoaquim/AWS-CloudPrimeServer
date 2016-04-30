@@ -123,6 +123,10 @@ public class WorkerInstance {
     }
 
     public synchronized void updateMetricValue(int requestID, String metricName, BigInteger metricValue) {
-        this.jobs.get(requestID).updateMetric(metricName, metricValue);
+        WorkInfo wi = this.jobs.get(requestID);
+
+        if(wi != null){
+            wi.updateMetric(metricName, metricValue);
+        }
     }
 }
