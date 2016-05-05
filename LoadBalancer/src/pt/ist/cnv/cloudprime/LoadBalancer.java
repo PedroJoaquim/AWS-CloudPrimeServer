@@ -260,9 +260,12 @@ public class LoadBalancer {
             if(!this.knownRequests.containsKey(request.getNumberToFactor())){
                 //for unknown requests
                 requestFactor += 100;
+                requestFactor += request.getRequestMetrics().calcRequestComplexity();
+            }
+            else{
+                requestFactor += (knownRequests.get(request.getNumberToFactor()).calcRequestComplexity() - request.getRequestMetrics().calcRequestComplexity());
             }
 
-            requestFactor += request.getRequestMetrics().calcRequestComplexity();
         }
 
         return ((cpuUtilization * 10) + requestFactor);
