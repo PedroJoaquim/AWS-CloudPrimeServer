@@ -117,7 +117,6 @@ public class AWSManager {
     public void updateCloudWatchMetrics(WorkerInstance instance){
 
         if(!"running".equals(instance.getState())){
-            updateInstance(instance);
             return;
         }
 

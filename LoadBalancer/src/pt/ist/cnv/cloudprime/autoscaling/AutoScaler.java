@@ -10,9 +10,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- * Created by ASUS on 22/04/2016.
- */
 public class AutoScaler {
 
     private static AutoScaler instance;
@@ -59,9 +56,7 @@ public class AutoScaler {
 
     private void initialize() {
         for (int i = 0; i < Config.MIN_INSTANCES_NR; i++) {
-            WorkerInstance wi = this.awsManager.startNewWorker();
-            addNewInstanceToLB(wi);
-            this.workers.add(wi);
+            startNewIsntace();
         }
     }
 
@@ -104,10 +99,7 @@ public class AutoScaler {
         if ((getRequestsMissedAndReset() > Config.MAX_REQUESTS_MISSED) || (matchesIncreaseRule() && this.workers.size() < Config.MAX_INSTANCES_NR &&
                 lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis())) {
 
-            WorkerInstance wi = this.awsManager.startNewWorker();
-            addNewInstanceToLB(wi);
-            this.workers.add(wi);
-            this.lastRuleApplied = System.currentTimeMillis();
+            startNewIsntace();
 
         } else if (matchesDecreaseRule() && this.workers.size() > Config.MIN_INSTANCES_NR &&
                 lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()) {
@@ -149,5 +141,12 @@ public class AutoScaler {
 
     public synchronized void terminate() {
         this.asThread.interrupt();
+    }
+
+    public synchronized void startNewIsntace() {
+        WorkerInstance wi = this.awsManager.startNewWorker();
+        addNewInstanceToLB(wi);
+        this.workers.add(wi);
+        this.lastRuleApplied = System.currentTimeMillis();
     }
 }

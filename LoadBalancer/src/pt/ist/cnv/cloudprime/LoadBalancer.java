@@ -7,6 +7,7 @@ import pt.ist.cnv.cloudprime.aws.AWSManager;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
 import pt.ist.cnv.cloudprime.aws.metrics.RequestMetrics;
 import pt.ist.cnv.cloudprime.aws.metrics.WorkInfo;
+import pt.ist.cnv.cloudprime.healthchecking.HealthChecker;
 import pt.ist.cnv.cloudprime.httpserver.ReadRequestHandler;
 import pt.ist.cnv.cloudprime.httpserver.ResponseRequesthandler;
 import pt.ist.cnv.cloudprime.mss.MSSRequester;
@@ -28,6 +29,11 @@ import java.util.concurrent.Executors;
 
 public class LoadBalancer {
 
+
+    /**
+     *      - uma instancia falha mandar para as outras
+     *      - saber que um numero vai passar a complexidade necessaria
+     */
 
     /**
      * Singleton instance for Load Balancer
@@ -85,6 +91,11 @@ public class LoadBalancer {
      */
     private MSSRequester mssRequest;
 
+    /**
+     * Entity that checks instance health
+     */
+    private HealthChecker healthChecker;
+
 
     public static void main(String[] args) throws Exception {
         LoadBalancer lb = new LoadBalancer();
@@ -116,12 +127,14 @@ public class LoadBalancer {
     private synchronized void terminate() {
         for (WorkerInstance wi: workers) {
             this.awsManager.terminateWorker(wi);
+            wi.terminate();
         }
 
         this.server.stop(1);
         this.threadPool.shutdownNow();
         this.autoScaler.terminate();
         this.mssRequest.terminate();
+        this.healthChecker.terminate();
     }
 
 
@@ -144,11 +157,13 @@ public class LoadBalancer {
         this.awsManager.setLbPublicIP(this.publicIP);
         this.autoScaler = new AutoScaler(this);
         this.mssRequest = new MSSRequester(publicIP, this);
+        this.healthChecker = new HealthChecker();
 
         startServer(Config.LB_PORT);
 
         this.autoScaler.start();
         this.mssRequest.start();
+        this.healthChecker.start();
     }
 
 
@@ -175,11 +190,15 @@ public class LoadBalancer {
         System.out.println("LOAD BALANCER STARTED AND RUNNING ON: " + port);
     }
 
-    public boolean handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
+    public void handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
 
         WorkerInstance worker = chooseWorker(numberToFactor);
 
-        if(worker == null) return false;
+        if(worker == null){
+            this.autoScaler.startNewIsntace();
+            handleNewRequest(httpExchange, numberToFactor);
+            return;
+        }
 
         System.out.println("[WI ASSIGNED] " + worker.getInstanceID());
 
@@ -187,7 +206,6 @@ public class LoadBalancer {
         this.pendingRequests.put(requestID, worker);
 
         worker.doRequest(new WorkInfo(httpExchange, numberToFactor, requestID));
-        return true;
     }
 
     public HttpExchange endPendingRequest(int requestID){
@@ -302,5 +320,30 @@ public class LoadBalancer {
             this.pendingRequests.get(requestID).updateMetricValue(requestID, metricName, metricValue);
         }
 
+    }
+
+
+    public synchronized List<WorkerInstance> getUpdatedWorkers() {
+
+        for (WorkerInstance wi: this.workers) {
+            this.awsManager.updateInstance(wi);
+        }
+
+        return this.workers;
+    }
+
+    /**
+     * Method called by the health checker to inform that an instance has failed
+     */
+
+    public synchronized void InstanceFailed(WorkerInstance wi) {
+
+        List<WorkInfo> currentJobs = wi.getCurrentJobs();
+        this.workers.remove(wi);
+
+        for (WorkInfo work : currentJobs) {
+            this.pendingRequests.remove(work.getRequestID());
+            handleNewRequest(work.getHttpExchange(), work.getNumberToFactor());
+        }
     }
 }

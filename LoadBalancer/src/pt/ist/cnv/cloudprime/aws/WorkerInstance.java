@@ -12,10 +12,9 @@ import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class WorkerInstance {
 
@@ -26,8 +25,10 @@ public class WorkerInstance {
     private long startTime;
     private String lbPublicIP;
     private Map<Integer, WorkInfo> jobs = new ConcurrentHashMap<Integer, WorkInfo>();
+    private Queue<WorkInfo> pendingJobs = new ConcurrentLinkedQueue<>();
     private boolean markedToFinish;
     private long markTimestamp;
+    private Thread prThread;
 
     public WorkerInstance(Instance instance, String lbPublicIP) {
         this.instance = instance;
@@ -35,6 +36,44 @@ public class WorkerInstance {
         this.lbPublicIP = lbPublicIP;
         this.startTime = System.currentTimeMillis();
         this.markedToFinish = false;
+
+
+        this.prThread = new Thread() {
+            public void run() {
+                try {
+                    while(!Thread.interrupted()){
+                        Thread.sleep(Config.WORKER_PENDING_REQ_SLEEP_TIME);
+                        executePendingRequests();
+                    }
+                } catch(InterruptedException e) {
+                    //finish
+                }
+            }
+        };
+
+        this.prThread.start();
+    }
+
+    /**
+     * Method executed by the prTrhead to check if there are any pending requests
+     */
+    private void executePendingRequests() {
+
+
+        WorkInfo wi;
+
+        if(pendingJobs.size() == 0 || !canRunRequest()){
+            return;
+        }
+
+        Iterator<WorkInfo> iter = pendingJobs.iterator();
+        while (iter.hasNext()) {
+            wi = iter.next();
+
+            this.jobs.put(wi.getRequestID(),wi);
+            sendGETRequest(wi.getNumberToFactor(), wi.getRequestID());
+            this.pendingJobs.remove(wi);
+        }
     }
 
     public String getInstanceID(){
@@ -57,17 +96,28 @@ public class WorkerInstance {
             }
         }
 
-        return "running".equals(getState())                                             &&
-                startTime + Config.GRACE_PERIOD <= System.currentTimeMillis()     &&
-                getPublicIP() != null                                                   &&
+        return ("running".equals(getState()) || "pending".equals(getState()))           &&
                 !markedToFinish;
     }
 
     public void doRequest(WorkInfo wi) {
-        jobs.put(wi.getRequestID(), wi);
-        if(!sendGETRequest(wi.getNumberToFactor(), wi.getRequestID())){
-            AutoScaler.getInstance().newRequestMissed();
+
+        if(canRunRequest()){
+            jobs.put(wi.getRequestID(), wi);
+            sendGETRequest(wi.getNumberToFactor(), wi.getRequestID());
         }
+        else{
+            pendingJobs.add(wi);
+        }
+    }
+
+    /*
+     * check if worker is ready to handle a request
+     */
+    private boolean canRunRequest() {
+        return "running".equals(getState()) &&
+                getPublicIP() != null       &&
+                startTime + Config.GRACE_PERIOD <= System.currentTimeMillis();
     }
 
     public WorkInfo getWorkInfo(int requestID){
@@ -128,5 +178,9 @@ public class WorkerInstance {
         if(wi != null){
             wi.updateMetric(metricName, metricValue);
         }
+    }
+
+    public void terminate() {
+        prThread.interrupt();
     }
 }
