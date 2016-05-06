@@ -34,6 +34,7 @@ public class RequestScript {
 
     public static synchronized void addResponseReceived(){
     	responsesReceived++;
+    	System.out.println("\nResponses Received: " + responsesReceived);
     }
 
     public static void printData(){

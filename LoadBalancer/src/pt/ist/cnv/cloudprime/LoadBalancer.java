@@ -31,11 +31,6 @@ public class LoadBalancer {
 
 
     /**
-     *      - uma instancia falha mandar para as outras
-     *      - saber que um numero vai passar a complexidade necessaria
-     */
-
-    /**
      * Singleton instance for Load Balancer
      */
     private static LoadBalancer instance = null;
@@ -194,10 +189,14 @@ public class LoadBalancer {
 
         WorkerInstance worker = chooseWorker(numberToFactor);
 
-        if(worker == null){
-            this.autoScaler.startNewIsntace();
-            handleNewRequest(httpExchange, numberToFactor);
-            return;
+        synchronized (AutoScaler.getInstance()){
+            synchronized (this){
+                if(worker == null){
+                    this.autoScaler.startNewInstance();
+                    handleNewRequest(httpExchange, numberToFactor);
+                    return;
+                }
+            }
         }
 
         System.out.println("[WI ASSIGNED] " + worker.getInstanceID());
@@ -210,6 +209,9 @@ public class LoadBalancer {
 
     public HttpExchange endPendingRequest(int requestID){
         WorkerInstance instance = this.pendingRequests.get(requestID);
+
+        if(instance == null) { return null; }
+
         HttpExchange he = instance.getWorkInfo(requestID).getHttpExchange();
 
         instance.endJob(requestID);
@@ -256,7 +258,7 @@ public class LoadBalancer {
         int cpuUtilization = Double.valueOf(wi.getCpuMetric().getValue()).intValue();
         int requestFactor = 0;
 
-        for (WorkInfo request: wi.getCurrentJobs()) {
+        for (WorkInfo request: wi.getAllJobs()) {
             if(!this.knownRequests.containsKey(request.getNumberToFactor())){
                 //for unknown requests
                 requestFactor += 100;
@@ -304,8 +306,9 @@ public class LoadBalancer {
 
     public synchronized boolean canDecrease(WorkerInstance wi) {
 
-        if(wi.getCurrentJobs().size() == 0){
+        if(wi.getAllJobs().size() == 0){
             this.workers.remove(wi);
+            wi.terminate();
             return true;
         }
 
@@ -332,17 +335,19 @@ public class LoadBalancer {
             this.awsManager.updateInstance(wi);
         }
 
-        return this.workers;
+        return new ArrayList<>(this.workers);
     }
 
     /**
      * Method called by the health checker to inform that an instance has failed
      */
 
-    public synchronized void InstanceFailed(WorkerInstance wi) {
+    public synchronized void instanceFailed(WorkerInstance wi) {
 
-        List<WorkInfo> currentJobs = wi.getCurrentJobs();
         this.workers.remove(wi);
+        wi.terminate();
+
+        List<WorkInfo> currentJobs = wi.getAllJobs();
 
         for (WorkInfo work : currentJobs) {
             this.pendingRequests.remove(work.getRequestID());

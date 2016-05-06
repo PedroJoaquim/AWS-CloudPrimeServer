@@ -1,6 +1,7 @@
 package pt.ist.cnv.cloudprime.healthchecking;
 
 import pt.ist.cnv.cloudprime.LoadBalancer;
+import pt.ist.cnv.cloudprime.autoscaling.AutoScaler;
 import pt.ist.cnv.cloudprime.aws.WorkerInstance;
 import pt.ist.cnv.cloudprime.util.Config;
 
@@ -32,16 +33,15 @@ public class HealthChecker {
 
     private void checkInstancesHealth() {
 
-        List<WorkerInstance> workers = LoadBalancer.getInstance().getUpdatedWorkers();
-
+        LoadBalancer lb = LoadBalancer.getInstance();
+        List<WorkerInstance> workers = lb.getUpdatedWorkers();
 
         for (WorkerInstance wi: workers) {
             if(IsFailedState(wi.getState())){
-                LoadBalancer.getInstance().InstanceFailed(wi);
+                AutoScaler.getInstance().instanceFailed(wi);
+                LoadBalancer.getInstance().instanceFailed(wi);
             }
         }
-
-
     }
 
     private boolean IsFailedState(String state) {

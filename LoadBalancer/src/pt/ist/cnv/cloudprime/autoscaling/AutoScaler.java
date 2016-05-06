@@ -7,7 +7,6 @@ import pt.ist.cnv.cloudprime.aws.metrics.CPUMetric;
 import pt.ist.cnv.cloudprime.util.Config;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class AutoScaler {
@@ -56,11 +55,11 @@ public class AutoScaler {
 
     private void initialize() {
         for (int i = 0; i < Config.MIN_INSTANCES_NR; i++) {
-            startNewIsntace();
+            startNewInstance();
         }
     }
 
-    private void monitor() {
+    private synchronized void monitor() {
         updateInstanceCloudWatchMetrics();
         calcNewSystemReading();
         applyRules();
@@ -99,7 +98,7 @@ public class AutoScaler {
         if ((getRequestsMissedAndReset() > Config.MAX_REQUESTS_MISSED) || (matchesIncreaseRule() && this.workers.size() < Config.MAX_INSTANCES_NR &&
                 lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis())) {
 
-            startNewIsntace();
+            startNewInstance();
 
         } else if (matchesDecreaseRule() && this.workers.size() > Config.MIN_INSTANCES_NR &&
                 lastRuleApplied + Config.TIME_BETWEEN_RULES <= System.currentTimeMillis()) {
@@ -129,10 +128,6 @@ public class AutoScaler {
         this.lb.addNewWorker(wi);
     }
 
-    public synchronized void newRequestMissed() {
-        this.requestsMissed++;
-    }
-
     public synchronized int getRequestsMissedAndReset() {
         int result =  requestsMissed;
         this.requestsMissed = 0;
@@ -143,10 +138,14 @@ public class AutoScaler {
         this.asThread.interrupt();
     }
 
-    public synchronized void startNewIsntace() {
+    public synchronized void startNewInstance() {
         WorkerInstance wi = this.awsManager.startNewWorker();
         addNewInstanceToLB(wi);
         this.workers.add(wi);
         this.lastRuleApplied = System.currentTimeMillis();
+    }
+
+    public synchronized void instanceFailed(WorkerInstance wi) {
+        this.workers.remove(wi);
     }
 }

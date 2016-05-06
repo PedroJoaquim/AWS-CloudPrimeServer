@@ -31,15 +31,15 @@ public class MSSRequester {
     public void start(){
         this.mssThread = new Thread() {
             public void run() {
-                while(!Thread.interrupted()){
-                    try {
+                try {
+                    while(!Thread.interrupted()){
                         Thread.sleep(Config.MSS_REQUEST_INTERVAL);
                         requestAndUpdate();
-                    } catch (InterruptedException e) {
-                        //finish
-                    } catch (ParseException e) {
-                        e.printStackTrace();
                     }
+                } catch (InterruptedException e) {
+                    //finish
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
             }
         };

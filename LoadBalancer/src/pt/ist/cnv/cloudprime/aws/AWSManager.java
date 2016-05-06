@@ -99,6 +99,8 @@ public class AWSManager {
         RunInstancesResult runInstancesResult = ec2.runInstances(runInstancesRequest);
         Instance instance = runInstancesResult.getReservation().getInstances().get(0);
 
+        System.out.println("[AWS] Instance Started - " + instance.getInstanceId());
+
         return new WorkerInstance(instance, this.lbPublicIP);
     }
 
@@ -111,6 +113,7 @@ public class AWSManager {
         TerminateInstancesRequest termInstanceReq = new TerminateInstancesRequest();
         termInstanceReq.withInstanceIds(instance.getInstanceID());
         this.ec2.terminateInstances(termInstanceReq);
+        System.out.println("[AWS] Instance Terminated - " + instance.getInstanceID());
     }
 
 
@@ -139,7 +142,7 @@ public class AWSManager {
         instance.setCpuMetric(new CPUMetric(datapoints));
     }
 
-    public synchronized void updateInstance(WorkerInstance w){
+    public void updateInstance(WorkerInstance w){
         DescribeInstancesResult result= ec2.describeInstances();
         List <Reservation> list  = result.getReservations();
 

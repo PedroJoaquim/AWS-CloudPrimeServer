@@ -57,7 +57,7 @@ public class WorkerInstance {
     /**
      * Method executed by the prTrhead to check if there are any pending requests
      */
-    private void executePendingRequests() {
+    private synchronized void executePendingRequests() {
 
 
         WorkInfo wi;
@@ -100,7 +100,7 @@ public class WorkerInstance {
                 !markedToFinish;
     }
 
-    public void doRequest(WorkInfo wi) {
+    public synchronized void doRequest(WorkInfo wi) {
 
         if(canRunRequest()){
             jobs.put(wi.getRequestID(), wi);
@@ -128,7 +128,13 @@ public class WorkerInstance {
         this.jobs.remove(requestID);
     }
 
-    public List<WorkInfo> getCurrentJobs() { return new ArrayList<>(this.jobs.values()); }
+    public synchronized List<WorkInfo> getAllJobs(){
+        List<WorkInfo> result = new ArrayList<WorkInfo>(this.jobs.values());
+        result.addAll(this.pendingJobs);
+
+        return result;
+    }
+
 
     private boolean sendGETRequest(String numberToFactor, int requestID){
 

@@ -34,6 +34,8 @@ public class ResponseRequesthandler extends BaseHandler {
 
         HttpExchange pendingRequest = LoadBalancer.getInstance().endPendingRequest(Integer.valueOf(requestID));
 
+        if(pendingRequest == null) { return;}
+
         writeResponseToClient(pendingRequest, response, 200);
         writeResponseToClient(httpExchange, "OK", 200);
     }
