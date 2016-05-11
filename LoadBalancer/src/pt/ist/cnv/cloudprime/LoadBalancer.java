@@ -187,10 +187,13 @@ public class LoadBalancer {
 
     public void handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
 
-        WorkerInstance worker = chooseWorker(numberToFactor);
+        WorkerInstance worker;
 
         synchronized (AutoScaler.getInstance()){
             synchronized (this){
+
+                worker = chooseWorker(numberToFactor);
+
                 if(worker == null){
                     this.autoScaler.startNewInstance();
                     handleNewRequest(httpExchange, numberToFactor);
@@ -237,6 +240,19 @@ public class LoadBalancer {
             if(minLoadFactor == -1 || loadFactor <= minLoadFactor){
                 minLoadFactor = loadFactor;
                 minLoadInstance = wi;
+            }
+        }
+
+        /*
+         * if the request + the min load factor >= COMPLEXITY THRESHOLD
+         * new instance is created and assigned
+         */
+
+        if(this.knownRequests.containsKey(numberToFactor)){
+            RequestMetrics pastRequest = this.knownRequests.get(numberToFactor);
+
+            if(minLoadFactor != 0 && pastRequest.calcRequestComplexity() + minLoadFactor >= Config.REQUEST_COMPLEXITY_THRESHOLD){
+                return this.autoScaler.startNewInstance();
             }
         }
 
@@ -313,6 +329,7 @@ public class LoadBalancer {
         }
 
         wi.markInstanceToFinish();
+
         return false;
     }
 

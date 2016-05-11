@@ -32,6 +32,8 @@ public class MSSRequester {
         this.mssThread = new Thread() {
             public void run() {
                 try {
+                    requestAndUpdate();
+
                     while(!Thread.interrupted()){
                         Thread.sleep(Config.MSS_REQUEST_INTERVAL);
                         requestAndUpdate();

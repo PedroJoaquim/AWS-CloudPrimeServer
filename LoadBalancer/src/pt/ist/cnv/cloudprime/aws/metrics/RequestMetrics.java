@@ -45,45 +45,13 @@ public class RequestMetrics {
         int instructionsFactor = Double.valueOf(this.totalInstructions.divide(Config.INSTRUCTIONS_THRESHOLD).toString()).intValue();
         int comparisonsFactor = Double.valueOf(this.totalComparisons.multiply(ONE_HUNDRED).divide(totalInstructions).toString()).intValue();
         int functionCallsFactor = Double.valueOf(this.totalFunctionCalls.multiply(ONE_HUNDRED).divide(totalInstructions).toString()).intValue();
-        return instructionsFactor * 100 + (comparisonsFactor * 10) + (functionCallsFactor * 10);
+        return instructionsFactor * 10000 + (comparisonsFactor * 10) + (functionCallsFactor * 10);
     }
 
-    /*
-     * Getters and Setters
-     */
 
     public String getRequestNumber() {
         return requestNumber;
     }
-
-    public void setRequestNumber(String requestNumber) {
-        this.requestNumber = requestNumber;
-    }
-
-    public BigInteger getTotalInstructions() {
-        return totalInstructions;
-    }
-
-    public void setTotalInstructions(BigInteger totalInstructions) {
-        this.totalInstructions = totalInstructions;
-    }
-
-    public BigInteger getTotalComparisons() {
-        return totalComparisons;
-    }
-
-    public void setTotalComparisons(BigInteger totalComparisons) {
-        this.totalComparisons = totalComparisons;
-    }
-
-    public BigInteger getTotalFunctionCalls() {
-        return totalFunctionCalls;
-    }
-
-    public void setTotalFunctionCalls(BigInteger totalFunctionCalls) {
-        this.totalFunctionCalls = totalFunctionCalls;
-    }
-
 
     public void addTotalInstructions(BigInteger metricValue) {
         this.totalInstructions = this.totalInstructions.add(metricValue);

@@ -12,6 +12,7 @@ public class Config {
     public static final BigInteger INSTRUCTIONS_THRESHOLD = new BigInteger("1000000000");
     public static final int LB_PORT = 8000;
     public static final int WORKER_PORT = 8000;
+    public static final int REQUEST_COMPLEXITY_THRESHOLD = 11000;
 
     /**
      * AUTO SCALING
@@ -48,4 +49,5 @@ public class Config {
     public static final long HEALTH_CHECKER_SLEEP_TIME = 60000;
 
     public static final long WORKER_PENDING_REQ_SLEEP_TIME = 20000;
+
 }

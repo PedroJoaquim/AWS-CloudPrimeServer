@@ -138,11 +138,13 @@ public class AutoScaler {
         this.asThread.interrupt();
     }
 
-    public synchronized void startNewInstance() {
+    public synchronized WorkerInstance startNewInstance() {
         WorkerInstance wi = this.awsManager.startNewWorker();
         addNewInstanceToLB(wi);
         this.workers.add(wi);
         this.lastRuleApplied = System.currentTimeMillis();
+
+        return wi;
     }
 
     public synchronized void instanceFailed(WorkerInstance wi) {
