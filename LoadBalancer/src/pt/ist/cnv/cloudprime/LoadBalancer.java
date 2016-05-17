@@ -41,7 +41,7 @@ public class LoadBalancer {
     private Map<Integer, WorkerInstance> pendingRequests = new ConcurrentHashMap<Integer, WorkerInstance>();
 
     /**
-     * Map that contains the info about already processed requests their metrics
+     * Map that contains the info about already processed requests and their metrics
      */
     private Map<String, RequestMetrics> knownRequests = new ConcurrentHashMap<String, RequestMetrics>();
 
@@ -56,7 +56,7 @@ public class LoadBalancer {
     private AWSManager awsManager = null;
 
     /**
-     * current requestID var
+     * current requestID
      */
     private int requestID = 1;
 
@@ -99,8 +99,20 @@ public class LoadBalancer {
     }
 
     /**
+     * Method to get the singleton instance of the Load Balancer
+     */
+
+    public static synchronized LoadBalancer getInstance(){
+        if(instance == null){
+            instance = new LoadBalancer();
+        }
+        return instance;
+    }
+
+
+    /**
      * method reading user input waiting to read 'exit'
-     * to stop the load balancer gracefully
+     * to stop the load balancer and all started instances gracefully
      */
     private static void waitToFinish() {
         Scanner scanner = new Scanner(System.in);
@@ -133,12 +145,7 @@ public class LoadBalancer {
     }
 
 
-    public static synchronized LoadBalancer getInstance(){
-        if(instance == null){
-            instance = new LoadBalancer();
-        }
-        return instance;
-    }
+
 
     /**
      * Starts the web server to receive the requests
@@ -164,7 +171,7 @@ public class LoadBalancer {
 
 
     /**
-     * Thread safe method to get a new unique requestID
+     * Threadsafe method to get a new unique requestID
      */
     private synchronized int getRequestID(){
         return this.requestID++;
@@ -178,12 +185,18 @@ public class LoadBalancer {
 
         threadPool = Executors.newCachedThreadPool();
         server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/f.html", new ReadRequestHandler());
-        server.createContext("/r.html", new ResponseRequesthandler());
+        server.createContext("/f.html", new ReadRequestHandler());          //receive user requests
+        server.createContext("/r.html", new ResponseRequesthandler());      //receive workers responses
         server.setExecutor(threadPool);
         server.start();
         System.out.println("LOAD BALANCER STARTED AND RUNNING ON: " + port);
     }
+
+    /**
+     * Method called when a new user request arrives
+     *  This method calls the load balancing algorithm method (chooseWorker)
+     *  and then assigns the request to that worker
+     */
 
     public void handleNewRequest(HttpExchange httpExchange, String numberToFactor) {
 
@@ -210,6 +223,15 @@ public class LoadBalancer {
         worker.doRequest(new WorkInfo(httpExchange, numberToFactor, requestID));
     }
 
+
+    /**
+     * Method called when the response from the workers is received and
+     *  marks que request as finished
+     *
+     * @param requestID the id associated to the request
+     * @return the HttpExchange with the connection to the user
+     */
+
     public HttpExchange endPendingRequest(int requestID){
         WorkerInstance instance = this.pendingRequests.get(requestID);
 
@@ -224,9 +246,9 @@ public class LoadBalancer {
 
 
     /**
-     * Function with the logic to choose a worker instance to handle the request
+     * Function that implements the load balancing algorithm to chosse a worker
      *
-     * @param numberToFactor
+     * @param numberToFactor the request number to be factored
      * @return the assigned instance to process the request
      */
     private synchronized WorkerInstance chooseWorker(String numberToFactor) {
@@ -289,6 +311,10 @@ public class LoadBalancer {
         return ((cpuUtilization * 10) + requestFactor);
     }
 
+    /**
+     *
+     * @return The list of available workers
+     */
 
     public List<WorkerInstance> getAvailableWorkers() {
         List<WorkerInstance> result = new ArrayList<WorkerInstance>();
@@ -333,10 +359,23 @@ public class LoadBalancer {
         return false;
     }
 
+    /**
+     * Function called by the MSSREquester thread when a new request metrics is available
+     *  this is always from a terminated request
+     *
+     * @param requestMetrics the metrics to be added
+     */
     public synchronized void addNewRequestMetrics(RequestMetrics requestMetrics) {
         this.knownRequests.put(requestMetrics.getRequestNumber(), requestMetrics);
     }
 
+    /**
+     * Function called by the MSSRequester thread when we have updated metrics from a running request
+     *
+     * @param requestID the request id
+     * @param metricName the metric name that we are updating (instructions, comparisons, ...)
+     * @param metricValue the new value
+     */
     public synchronized void updateMetric(int requestID, String metricName, BigInteger metricValue) {
 
         if(this.pendingRequests.containsKey(requestID)){
@@ -345,7 +384,10 @@ public class LoadBalancer {
 
     }
 
-
+    /**
+     * Function that updates the Instance (AWS SDK) object with refreshed values for important
+     *  fields as IP and instance state
+     */
     public synchronized List<WorkerInstance> getUpdatedWorkers() {
 
         for (WorkerInstance wi: this.workers) {
@@ -357,6 +399,7 @@ public class LoadBalancer {
 
     /**
      * Method called by the health checker to inform that an instance has failed
+     * and starts the fault tolerance protocol
      */
 
     public synchronized void instanceFailed(WorkerInstance wi) {
